@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import { inflate } from 'pako'
 import { ESPLoader } from 'esptool-js'
 import { md5 } from '../src/content/flashRead.ts'
+import { isFlashVerificationError } from '../src/content/flashSession.ts'
 import { fixture } from './helpers/flashFixtures.mjs'
 
 for (const badAddress of [null, 0, 0x20000, 0x100000]) {
@@ -39,7 +40,11 @@ for (const badAddress of [null, 0, 0x20000, 0x100000]) {
       await writing
       assert.deepEqual(checked, files.map(file => file.address))
     } else {
-      await assert.rejects(writing, /MD5 of file does not match data in flash/)
+      await assert.rejects(writing, error => {
+        assert.match(error.message, /MD5 of file does not match data in flash/)
+        assert.equal(isFlashVerificationError(error), true)
+        return true
+      })
       assert.equal(checked.at(-1), badAddress)
     }
   })

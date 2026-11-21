@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ESPLoader, Transport } from 'esptool-js'
 import { FlashNavigation } from '../components/FlashNavigation'
-import { restartTransport } from '../content/flashSession'
+import { isFlashVerificationError, openMonitorPort, restartTransport } from '../content/flashSession'
 import { Facts, PageHead } from '../components/Doc'
 import { GuideNav } from '../components/GuideNav'
 import { md5, readFlashRange, readWholeFlash } from '../content/flashRead'
@@ -288,7 +288,9 @@ export function Flash() {
           : t('The firmware files do not match a supported layout. Nothing was written.',
               'Файлы прошивки не соответствуют поддерживаемой разметке. Ничего не записано.')
         : writing
-          ? t('Writing stopped. Connect again.', 'Запись прервалась. Подключите ещё раз.')
+          ? isFlashVerificationError(error)
+            ? t('The written data did not verify. Connect again and reinstall.', 'Записанные данные не прошли проверку. Подключите ещё раз и переустановите прошивку.')
+            : t('Writing stopped. Connect again.', 'Запись прервалась. Подключите ещё раз.')
           : t('Preparation failed. Nothing was written. Connect again.', 'Подготовка не удалась. Ничего не записано. Подключите ещё раз.')
       setPhase({ name: 'error', message })
     } finally {
@@ -304,7 +306,7 @@ export function Flash() {
     try {
       port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ESPRESSIF }] })
       if (!mounted.current) return
-      await port.open({ baudRate: 115200 })
+      await openMonitorPort(port)
       // Unmount may finish before open resolves, so cleanup cannot own this port yet.
       if (!mounted.current) {
         await port.close().catch(() => {})

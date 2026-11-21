@@ -39,7 +39,7 @@ async function serial(page, gate) {
       if (gate === 'request') await wait()
       if (gate === 'cancel') throw new DOMException('Cancelled', 'NotFoundError')
       if (gate === 'failure') throw new Error('Port unavailable')
-      return port
+      return { ...port }
     }
   }, gate)
   // Only fake transport is ever loaded: tests cannot request real hardware.
@@ -149,7 +149,7 @@ for (const [name, index] of [['bootloader', 0], ['recovery', 3], ['main', 4]]) {
     await page.getByRole('button', { name: 'Install', exact: true }).click()
     await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start'])
     await page.evaluate(index => { window.failVerification = index; window.finishWrite() }, index)
-    await expect(page.getByText('Writing stopped. Connect again.')).toBeVisible()
+    await expect(page.getByText('The written data did not verify. Connect again and reinstall.')).toBeVisible()
     expect(await page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start', 'disconnect'])
     await expect(page.getByText(/^Installed\./)).toHaveCount(0)
   })
@@ -209,6 +209,32 @@ for (const gate of ['cancel', 'failure']) {
     await expect(page.getByRole('button', { name: 'Monitor', exact: true })).toBeEnabled()
   })
 }
+
+test('monitor open timeout releases the busy page and a late open cannot replace a retry', async ({ page }) => {
+  await serial(page, 'open')
+  await page.goto('/flash')
+  await page.clock.install()
+  await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open'])
+  await page.evaluate(() => { window.lateMonitor = window.continueMonitor })
+  await page.clock.fastForward(10_000)
+  await expect(page.getByText('The port does not open.')).toBeVisible()
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open', 'request', 'open'])
+  await page.evaluate(() => window.lateMonitor())
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open', 'request', 'open', 'close'])
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
+  await page.evaluate(() => window.continueMonitor())
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toContain('signals')
+  await page.clock.fastForward(100)
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
+  await page.getByRole('link', { name: 'Firmware', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/firmware$/)
+})
 
 test('stopping a running monitor releases the reader and port', async ({ page }) => {
   await serial(page, 'none')
