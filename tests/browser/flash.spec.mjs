@@ -1,16 +1,47 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from '@playwright/test'
+import { createHash } from 'node:crypto'
 import { fixture } from '../helpers/flashFixtures.mjs'
 
 const release = { version: '0.1.35', date: '', notes: '', builds: { release: '0.1.35/manifest.json' } }
 const resets = ['bootloader', 'DTR:false', 'RTS:true', 'RTS:false', 'disconnect']
 
-async function serial(page) {
+async function serial(page, gate) {
   page.on('pageerror', (error) => { throw error })
-  await page.addInitScript(() => {
+  await page.addInitScript(gate => {
     window.serialCalls = []
     Object.defineProperty(navigator, 'serial', { value: { requestPort: async () => ({}) } })
-  })
+    if (gate === undefined) return
+    const wait = () => new Promise(resolve => { window.continueMonitor = resolve })
+    const port = {
+      async open() {
+        window.serialCalls.push('open')
+        if (gate === 'open') await wait()
+      },
+      async close() { window.serialCalls.push('close') },
+      async setSignals() {
+        window.serialCalls.push('signals')
+        if (gate === 'reset') await wait()
+      },
+      readable: {
+        getReader() {
+          window.serialCalls.push('reader')
+          return {
+            read: () => new Promise(resolve => { window.cancelRead = () => resolve({ done: true }) }),
+            cancel: async () => window.cancelRead(),
+            releaseLock() { window.serialCalls.push('releaseLock') },
+          }
+        },
+      },
+    }
+    navigator.serial.requestPort = async () => {
+      window.serialCalls.push('request')
+      if (gate === 'request') await wait()
+      if (gate === 'cancel') throw new DOMException('Cancelled', 'NotFoundError')
+      if (gate === 'failure') throw new Error('Port unavailable')
+      return port
+    }
+  }, gate)
   // Only fake transport is ever loaded: tests cannot request real hardware.
   await page.route('**/esptool-js.js*', (route) => route.fulfill({ contentType: 'application/javascript', body: `
     export class Transport {
@@ -21,10 +52,19 @@ async function serial(page) {
     export class ESPLoader {
       chip = { CHIP_NAME: 'ESP32-C6', readMac: async () => 'aa:bb:cc:dd:ee:ff' }
       async main() { window.serialCalls.push('bootloader') }
-      async writeFlash() {
+      async writeFlash(options) {
         window.serialCalls.push('write:start')
         await new Promise(resolve => { window.finishWrite = resolve })
         if (window.failWrite) throw new Error('USB disconnected during write')
+        const expected = ${JSON.stringify(fixture('fresh').files.map(file => createHash('md5').update(file.data).digest('hex')))}
+        for (const [index, file] of options.fileArray.entries()) {
+          if (options.calculateMD5Hash) {
+            if (options.calculateMD5Hash(file.data) !== expected[index] || window.failVerification === index)
+              throw new Error('MD5 of file does not match data in flash!')
+          } else {
+            throw new Error('Missing flash verification callback')
+          }
+        }
         window.serialCalls.push('write:end')
       }
     }
@@ -98,6 +138,86 @@ test('failed writing releases the port without attempting to boot an incomplete 
   await page.evaluate(() => { window.failWrite = true; window.finishWrite() })
   await expect(page.getByText('Writing stopped. Connect again.')).toBeVisible()
   expect(await page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start', 'disconnect'])
+})
+
+for (const [name, index] of [['bootloader', 0], ['recovery', 3], ['main', 4]]) {
+  test(`${name} flash MD5 mismatch prevents success and reset`, async ({ page }) => {
+    await serial(page)
+    await page.goto('/flash')
+    await connect(page)
+    await page.getByRole('combobox', { name: 'Install', exact: true }).selectOption('fresh')
+    await page.getByRole('button', { name: 'Install', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start'])
+    await page.evaluate(index => { window.failVerification = index; window.finishWrite() }, index)
+    await expect(page.getByText('Writing stopped. Connect again.')).toBeVisible()
+    expect(await page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start', 'disconnect'])
+    await expect(page.getByText(/^Installed\./)).toHaveCount(0)
+  })
+
+  for (const defect of ['truncated', 'corrupt SHA']) {
+    test(`${name} ${defect} prevents even a fresh erase or write`, async ({ page }) => {
+      await serial(page)
+      const f = fixture('fresh')
+      const raw = f.files[index].data
+      if (defect === 'corrupt SHA') raw[raw.length - 1] ^= 1
+      await page.route('**/' + f.parts[index].path, route => route.fulfill({
+        body: Buffer.from(defect === 'truncated' ? raw.subarray(0, 24) : raw),
+      }))
+      await page.goto('/flash')
+      await connect(page)
+      await page.getByRole('combobox', { name: 'Install', exact: true }).selectOption('fresh')
+      await page.getByRole('button', { name: 'Install', exact: true }).click()
+      await expect(page.getByText('The firmware files do not match a supported layout. Nothing was written.')).toBeVisible()
+      expect(await page.evaluate(() => window.serialCalls)).toEqual(resets)
+    })
+  }
+}
+
+for (const gate of ['request', 'open', 'reset']) {
+  test(`monitor startup blocks navigation during ${gate} and releases a port after forced unmount`, async ({ page }) => {
+    await serial(page, gate)
+    // Force an unmount as well as testing the router guard; a pending open cannot be cancelled.
+    await page.route('**/src/main.tsx', route => route.fulfill({
+      contentType: 'application/javascript', body: "import '/tests/helpers/flashHarness.tsx'",
+    }))
+    await page.goto('/flash')
+    await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+    const before = gate === 'request' ? ['request'] : gate === 'open' ? ['request', 'open'] : ['request', 'open', 'signals']
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(before)
+    await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
+    await page.getByRole('link', { name: 'Firmware', exact: true }).first().click()
+    await expect(page.getByRole('alert')).toContainText('Wait for the operation')
+    await expect(page).toHaveURL(/\/flash$/)
+    await page.evaluate(() => { window.unmountFlash(); window.continueMonitor() })
+    const expected = gate === 'request' ? before : [...before, 'close']
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(expected)
+    await page.waitForTimeout(150)
+    expect(await page.evaluate(() => window.serialCalls)).toEqual(expected)
+  })
+}
+
+for (const gate of ['cancel', 'failure']) {
+  test(`monitor startup ${gate} restores usable controls`, async ({ page }) => {
+    await serial(page, gate)
+    await page.goto('/flash')
+    await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+    if (gate === 'failure') {
+      await expect(page.getByText('The port does not open.')).toBeVisible()
+      await page.getByRole('button', { name: 'Try again', exact: true }).click()
+    }
+    await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Monitor', exact: true })).toBeEnabled()
+  })
+}
+
+test('stopping a running monitor releases the reader and port', async ({ page }) => {
+  await serial(page, 'none')
+  await page.goto('/flash')
+  await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open', 'signals', 'signals', 'reader'])
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open', 'signals', 'signals', 'reader', 'releaseLock', 'close'])
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
 })
 
 for (const failure of ['network', 'http', 'empty']) {

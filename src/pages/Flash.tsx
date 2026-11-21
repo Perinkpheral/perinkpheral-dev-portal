@@ -5,7 +5,7 @@ import { FlashNavigation } from '../components/FlashNavigation'
 import { restartTransport } from '../content/flashSession'
 import { Facts, PageHead } from '../components/Doc'
 import { GuideNav } from '../components/GuideNav'
-import { readFlashRange, readWholeFlash } from '../content/flashRead'
+import { md5, readFlashRange, readWholeFlash } from '../content/flashRead'
 import { FLASH_BYTES, TABLE_ADDRESS, SECTOR_BYTES, FlashPlanError, manifestPath, manifestParts, releaseUrl, validateFiles } from '../content/flashPlan'
 import type { Builds, Flavor, InstallMode } from '../content/flashPlan'
 import { useT } from '../i18n'
@@ -83,6 +83,7 @@ const STEPS: [string[], [string, string], [string, string]][] = [
 type Phase =
   | { name: 'idle' }
   | { name: 'monitor' }
+  | { name: 'monitor-starting' }
   | { name: 'connecting' }
   | { name: 'disconnecting' }
   | { name: 'connected'; chip: string; mac: string; saved?: string }
@@ -156,21 +157,26 @@ export function Flash() {
   // Normal navigation awaits reset through FlashNavigation. Unmount also releases
   // an idle connection; active operations must finish before the port is touched.
   const operation = useRef(false)
+  const mounted = useRef(false)
   useEffect(
-    () => () => {
-      const reader = monitorReader.current
-      const port = monitorPort.current
-      monitorReader.current = null
-      monitorPort.current = null
-      void (async () => {
-        await reader?.cancel().catch(() => {})
-        await port?.close().catch(() => {})
-      })()
-      if (!operation.current) {
-        const line = transport.current
-        transport.current = null
-        loader.current = null
-        void restartTransport(line).then(() => line?.disconnect()).catch(() => {})
+    () => {
+      mounted.current = true
+      return () => {
+        mounted.current = false
+        const reader = monitorReader.current
+        const port = monitorPort.current
+        monitorReader.current = null
+        monitorPort.current = null
+        void (async () => {
+          await reader?.cancel().catch(() => {})
+          await port?.close().catch(() => {})
+        })()
+        if (!operation.current) {
+          const line = transport.current
+          transport.current = null
+          loader.current = null
+          void restartTransport(line).then(() => line?.disconnect()).catch(() => {})
+        }
       }
     },
     [],
@@ -251,7 +257,7 @@ export function Flash() {
         return { data: new Uint8Array(await answer.arrayBuffer()), address: part.offset }
       }))
       const source = mode === 'preserve' ? await readFlashRange(device, TABLE_ADDRESS, SECTOR_BYTES) : undefined
-      const { recovery } = validateFiles(parts, files, mode, source)
+      const { recovery } = await validateFiles(parts, files, mode, source)
       const total = files.reduce((sum, file) => sum + file.data.length, 0)
       const before = files.map((_, index) => files.slice(0, index).reduce((sum, file) => sum + file.data.length, 0))
       writing = true
@@ -263,6 +269,7 @@ export function Flash() {
         flashFreq: 'keep',
         eraseAll: mode === 'fresh',
         compress: true,
+        calculateMD5Hash: md5,
         reportProgress: (index, written, size) => {
           const share = (before[index] + (written / size) * files[index].data.length) / total
           setPhase({ name: 'writing', done: Math.round(share * 100) })
@@ -292,17 +299,27 @@ export function Flash() {
   // What the board's firmware writes on its console, from a restart on: the
   // way to see why a board that does not answer does not.
   const monitor = async () => {
+    setPhase({ name: 'monitor-starting' })
     let port: SerialPort | null = null
     try {
       port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ESPRESSIF }] })
+      if (!mounted.current) return
       await port.open({ baudRate: 115200 })
+      // Unmount may finish before open resolves, so cleanup cannot own this port yet.
+      if (!mounted.current) {
+        await port.close().catch(() => {})
+        return
+      }
       monitorPort.current = port
       setLog('')
-      setPhase({ name: 'monitor' })
       // a reset into the firmware, as esptool's hard reset over USB-JTAG
       await port.setSignals({ dataTerminalReady: false, requestToSend: true })
+      if (monitorPort.current !== port) return
       await new Promise((resolve) => setTimeout(resolve, 100))
+      if (monitorPort.current !== port) return
       await port.setSignals({ requestToSend: false })
+      if (monitorPort.current !== port) return
+      setPhase({ name: 'monitor' })
       const decoder = new TextDecoder()
       while (port.readable && monitorPort.current === port) {
         const reader = port.readable.getReader()
@@ -325,8 +342,11 @@ export function Flash() {
         }
       }
     } catch (error) {
+      if (!mounted.current) return
       const cancelled = error instanceof DOMException && error.name === 'NotFoundError'
-      if (!cancelled) {
+      if (cancelled) {
+        setPhase({ name: 'idle' })
+      } else {
         // a port that opened and then failed is let go, or nothing could open it again
         if (port && monitorPort.current === port) {
           await closeMonitor()
@@ -390,7 +410,7 @@ export function Flash() {
 
   const version = current?.version ?? null
   const busy =
-    phase.name === 'connecting' || phase.name === 'disconnecting' || phase.name === 'preparing' || phase.name === 'erasing' || phase.name === 'writing' || phase.name === 'reading'
+    phase.name === 'monitor-starting' || phase.name === 'connecting' || phase.name === 'disconnecting' || phase.name === 'preparing' || phase.name === 'erasing' || phase.name === 'writing' || phase.name === 'reading'
 
   let body
   if (!supported) {
@@ -402,7 +422,7 @@ export function Flash() {
     </>
   } else if (releases === 'none') {
     body = <p>{t('No firmware is published yet.', 'Прошивка ещё не опубликована.')}</p>
-  } else if (phase.name === 'idle' || phase.name === 'connecting') {
+  } else if (phase.name === 'idle' || phase.name === 'connecting' || phase.name === 'monitor-starting') {
     const list = Array.isArray(releases) ? releases : []
     body = (
       <>

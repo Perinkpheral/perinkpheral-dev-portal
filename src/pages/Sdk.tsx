@@ -141,7 +141,7 @@ export function Sdk() {
               <p>{t('wasi-sdk (verified with 34), Java 21 or later, Git. The simulator also needs a C compiler and Make.', 'wasi-sdk (проверено с 34), Java 21 или новее, Git. Для симулятора также нужны компилятор C и Make.')}</p>
               <Code label="shell">{`
 git clone ${repo.firmware}.git
-cd perinkpheral
+cd perinkpheral-os
 export WASI_SDK_PATH=$HOME/opt/wasi-sdk
 tools/perinkpheral
 `}</Code>

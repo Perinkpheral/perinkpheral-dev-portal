@@ -101,7 +101,31 @@ export function manifestParts(raw: unknown, version: string, flavor: Flavor, mod
   return parts
 }
 
-export function validateFiles(parts: Part[], files: FlashFile[], mode: InstallMode, source?: Uint8Array): { recovery: boolean } {
+async function validateImage(data: Uint8Array): Promise<void> {
+  if (data.length < 24 || data[0] !== 0xe9 || data[12] !== 13 || data[13] !== 0 ||
+      data[1] < 1 || data[1] > 16 || data[23] > 1) fail()
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength)
+  let at = 24
+  let checksum = 0xef
+  for (let segment = 0; segment < data[1]; segment += 1) {
+    if (at + 8 > data.length) fail()
+    const size = view.getUint32(at + 4, true)
+    at += 8
+    if (size % 4 || size > data.length - at) fail()
+    const end = at + size
+    for (; at < end; at += 1) checksum ^= data[at]
+  }
+  // Require the complete checksum block before esptool can erase flash.
+  const end = Math.ceil((at + 1) / 16) * 16
+  if (data.length !== end + (data[23] ? 32 : 0) || data[end - 1] !== checksum ||
+      !data.subarray(at, end - 1).every(byte => byte === 0)) fail()
+  if (data[23]) {
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data.slice(0, end)))
+    if (!digest.every((byte, index) => byte === data[end + index])) fail()
+  }
+}
+
+export async function validateFiles(parts: Part[], files: FlashFile[], mode: InstallMode, source?: Uint8Array): Promise<{ recovery: boolean }> {
   if (files.length !== parts.length || files.some((file, index) => file.address !== parts[index].offset || !file.data.length)) fail()
   const table = files.find(file => file.address === TABLE_ADDRESS)
   if (!table) fail()
@@ -130,7 +154,7 @@ export function validateFiles(parts: Part[], files: FlashFile[], mode: InstallMo
     if (Math.ceil(data.length / SECTOR_BYTES) * SECTOR_BYTES > entry.capacity) fail()
     if (entry.name === 'ota_data_initial.bin' && (data.length !== entry.capacity || !data.every(byte => byte === 0xff))) fail()
     if (entry.name === 'bootloader.bin' || entry.name === 'perink_recovery.bin' || entry.name === 'perinkpheral.bin') {
-      if (data.length < 24 || data[0] !== 0xe9 || data[12] !== 13 || data[13] !== 0) fail()
+      await validateImage(data)
     }
   }
   return { recovery }

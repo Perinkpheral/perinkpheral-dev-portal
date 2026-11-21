@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { manifestPath, manifestParts, releaseUrl, validateFiles, validateSource } from '../src/content/flashPlan.ts'
 
-import { fixture, recovery, legacy, table } from './helpers/flashFixtures.mjs'
+import { fixture, recovery, legacy, table, image } from './helpers/flashFixtures.mjs'
 
 test('missing migration never falls back to an erasing manifest', () => {
   const builds = { release: 'manifest.json', debug: 'debug-manifest.json' }
@@ -15,18 +15,18 @@ test('missing migration never falls back to an erasing manifest', () => {
   assert.equal(manifestPath(current, 'debug', 'preserve'), 'debug-migration-manifest.json')
 })
 for (const flavor of ['release', 'debug']) for (const mode of ['fresh', 'preserve']) {
-  test(`${flavor} ${mode} uses matching files and accepts both shipped source layouts`, () => {
+  test(`${flavor} ${mode} uses matching files and accepts both shipped source layouts`, async () => {
     const f = fixture(mode, recovery, flavor)
     assert.deepEqual(manifestParts(f.manifest, 'v0.1.35', flavor, mode), f.parts)
-    for (const source of [legacy, recovery]) assert.deepEqual(validateFiles(f.parts, f.files, mode, table(source)), { recovery: true })
+    for (const source of [legacy, recovery]) assert.deepEqual(await validateFiles(f.parts, f.files, mode, table(source)), { recovery: true })
   })
 }
-test('old releases still support an explicit fresh install', () => {
+test('old releases still support an explicit fresh install', async () => {
   const f = fixture('fresh', legacy)
   delete f.manifest.new_install_prompt_erase
   manifestParts(f.manifest, '0.1.35', 'release', 'fresh')
-  assert.deepEqual(validateFiles(f.parts, f.files, 'fresh'), { recovery: false })
-  assert.throws(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)))
+  assert.deepEqual(await validateFiles(f.parts, f.files, 'fresh'), { recovery: false })
+  await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)))
 })
 for (const [name, mutate] of [
   ['missing erase policy', m => { delete m.new_install_prompt_erase }],
@@ -67,13 +67,13 @@ for (const [name, mutate] of [
   ['apps included in migration', f => { f.parts.push({ path: 'apps.bin', offset: 0x350000 }); f.files.push({ address: 0x350000, data: new Uint8Array(4096) }) }],
   ['write redirected to settings', f => { f.parts[4].offset = 0x9000; f.files[4].address = 0x9000 }],
   ['mismatched download address', f => { f.files[4].address = 0x20000 }],
-]) test(`reject before writing: ${name}`, () => {
+]) test(`reject before writing: ${name}`, async () => {
   const f = fixture(); mutate(f)
-  assert.throws(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)))
+  await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)))
 })
-test('preservation requires a source table; fresh install ignores unknown source', () => {
-  const keep = fixture(); assert.throws(() => validateFiles(keep.parts, keep.files, 'preserve'), { message: 'source' })
-  const fresh = fixture('fresh'); validateFiles(fresh.parts, fresh.files, 'fresh', new Uint8Array(4096))
+test('preservation requires a source table; fresh install ignores unknown source', async () => {
+  const keep = fixture(); await assert.rejects(() => validateFiles(keep.parts, keep.files, 'preserve'), { message: 'source' })
+  const fresh = fixture('fresh'); await validateFiles(fresh.parts, fresh.files, 'fresh', new Uint8Array(4096))
 })
 test('release URLs stay in the published directory', () => {
   const base = new URL('https://perinkpheral.github.io/perinkpheral-os/flash/v0.1.35/manifest.json')
@@ -81,4 +81,44 @@ test('release URLs stay in the published directory', () => {
   for (const path of ['../bootloader.bin', '//example.com/bootloader.bin', 'https://example.com/file', '/file', '?x=1', '#x', '']) {
     assert.throws(() => releaseUrl(path, base))
   }
+})
+
+for (const hashed of [false, true]) {
+  test(`complete multi-segment images pass with appended SHA: ${hashed}`, async () => {
+    const f = fixture()
+    for (const index of [0, 3, 4]) f.files[index].data = image(hashed, [4, 0, 16])
+    assert.deepEqual(await validateFiles(f.parts, f.files, 'preserve', table(legacy)), { recovery: true })
+  })
+}
+for (const index of [0, 3, 4]) for (const [name, mutate] of [
+  ['header only', raw => raw.subarray(0, 24)],
+  ['zero segments', raw => { raw[1] = 0; return raw }],
+  ['too many segments', raw => { raw[1] = 17; return raw }],
+  ['missing segment header', raw => { raw[1] = 2; return raw.subarray(0, 40) }],
+  ['truncated segment header', raw => raw.subarray(0, 31)],
+  ['truncated segment data', raw => raw.subarray(0, 33)],
+  ['segment beyond image', raw => { new DataView(raw.buffer).setUint32(28, 0xfffffffc, true); return raw }],
+  ['unaligned segment', raw => { new DataView(raw.buffer).setUint32(28, 3, true); return raw }],
+  ['missing checksum', raw => raw.subarray(0, 47)],
+  ['bad checksum', raw => { raw[47] ^= 1; return raw }],
+  ['corrupted segment', raw => { raw[32] ^= 1; return raw }],
+  ['invalid padding', raw => { raw[40] = 1; return raw }],
+  ['missing SHA', raw => raw.subarray(0, 48)],
+  ['truncated SHA', raw => raw.subarray(0, -1)],
+  ['bad SHA', raw => { raw[48] ^= 1; return raw }],
+  // Keep the XOR checksum unchanged to prove SHA is checked independently.
+  ['corruption with matching checksum', raw => { raw[32] ^= 1; raw[33] ^= 1; return raw }],
+  ['invalid SHA flag', raw => { raw[23] = 2; return raw }],
+  ['unexpected trailing bytes', raw => new Uint8Array([...raw, 0xff])],
+]) test(`reject image ${index} before writing: ${name}`, async () => {
+  const f = fixture()
+  f.files[index].data = mutate(image())
+  await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)), { message: 'manifest' })
+})
+
+test('checksum remains required without appended SHA', async () => {
+  const f = fixture()
+  f.files[4].data = image(false)
+  f.files[4].data[32] ^= 1
+  await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)), { message: 'manifest' })
 })

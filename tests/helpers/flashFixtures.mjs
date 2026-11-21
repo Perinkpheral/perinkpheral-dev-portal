@@ -24,9 +24,25 @@ export function table(entries) {
   createHash('md5').update(raw.subarray(0, at)).digest().copy(raw, at + 16)
   return raw
 }
+export function image(hashed = true, sizes = [8]) {
+  const segmentsEnd = 24 + sizes.reduce((sum, size) => sum + 8 + size, 0)
+  const end = Math.ceil((segmentsEnd + 1) / 16) * 16
+  const raw = Buffer.alloc(end + (hashed ? 32 : 0))
+  raw[0] = 0xe9; raw[1] = sizes.length; raw[12] = 13; raw[23] = Number(hashed)
+  let at = 24
+  let checksum = 0xef
+  for (const size of sizes) {
+    raw.writeUInt32LE(0x40800000, at)
+    raw.writeUInt32LE(size, at + 4)
+    at += 8
+    for (let i = 0; i < size; i += 1) { raw[at] = (i + 1) & 255; checksum ^= raw[at]; at += 1 }
+  }
+  raw[end - 1] = checksum
+  if (hashed) createHash('sha256').update(raw.subarray(0, end)).digest().copy(raw, end)
+  return new Uint8Array(raw)
+}
 export function fixture(mode = 'preserve', layout = recovery, flavor = 'release') {
   const hasRecovery = layout === recovery
-  const image = () => { const raw = new Uint8Array(304); raw[0] = 0xe9; raw[12] = 13; return raw }
   const entries = [
     ['bootloader.bin', 0, image()], ['partition-table.bin', 0x8000, table(layout)],
     ['ota_data_initial.bin', 0xf000, new Uint8Array(0x2000).fill(255)],
