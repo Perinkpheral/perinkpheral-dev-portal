@@ -27,7 +27,10 @@ async function serial(page, gate) {
         getReader() {
           window.serialCalls.push('reader')
           return {
-            read: () => new Promise(resolve => { window.cancelRead = () => resolve({ done: true }) }),
+            read: () => new Promise(resolve => {
+              window.cancelRead = () => resolve({ done: true })
+              window.writeMonitor = text => resolve({ value: new TextEncoder().encode(text), done: false })
+            }),
             cancel: async () => window.cancelRead(),
             releaseLock() { window.serialCalls.push('releaseLock') },
           }
@@ -84,6 +87,46 @@ async function connect(page) {
   await page.getByRole('button', { name: 'Connect', exact: true }).click()
   await expect(page.getByText('aa:bb:cc:dd:ee:ff')).toBeVisible()
 }
+
+test('a cold esptool import cannot delay the port chooser past user activation', async ({ page }) => {
+  await serial(page)
+  let finishImport
+  const imported = new Promise(resolve => { finishImport = resolve })
+  await page.route('**/esptool-js.js*', async route => {
+    await imported
+    await route.fallback()
+  })
+  await page.goto('/flash')
+  await page.evaluate(() => {
+    navigator.serial.requestPort = async () => {
+      if (!navigator.userActivation.isActive) throw new DOMException('User activation required', 'SecurityError')
+      window.serialCalls.push('request')
+      return {}
+    }
+  })
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
+  try {
+    // The chooser must already have run while the import is still blocked.
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request'])
+    await page.waitForFunction(() => !navigator.userActivation.isActive)
+  } finally {
+    finishImport()
+  }
+  await expect(page.getByText('aa:bb:cc:dd:ee:ff')).toBeVisible()
+  expect(await page.evaluate(() => window.serialCalls)).toEqual(['request', 'bootloader'])
+})
+
+test('cancelling Connect restores controls without loading esptool', async ({ page }) => {
+  await serial(page, 'cancel')
+  let imports = 0
+  await page.route('**/esptool-js.js*', route => { imports++; return route.fallback() })
+  await page.goto('/flash')
+  await page.getByRole('button', { name: 'Connect', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
+  expect(await page.evaluate(() => window.serialCalls)).toEqual(['request'])
+  expect(imports).toBe(0)
+  await expect(page.getByText('The board does not answer.')).toHaveCount(0)
+})
 
 for (const way of ['next', 'back', 'language']) {
   test(`leaving a connected board via ${way} restarts before disconnecting`, async ({ page }) => {
@@ -245,6 +288,67 @@ test('stopping a running monitor releases the reader and port', async ({ page })
   await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open', 'signals', 'signals', 'reader', 'releaseLock', 'close'])
   await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
 })
+
+for (const stage of ['open', 'running']) {
+  test(`index failure during monitor ${stage} preserves the console and Stop`, async ({ page }) => {
+    await serial(page, stage === 'open' ? 'open' : 'none')
+    let failIndex
+    const index = new Promise(resolve => { failIndex = resolve })
+    await page.route('**/flash/index.json', async route => {
+      await index
+      await route.fulfill({ status: 503 })
+    })
+    await page.goto('/flash')
+    await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+    if (stage === 'open') {
+      await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['request', 'open'])
+    } else {
+      await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+    }
+    const failedIndex = page.waitForResponse('**/flash/index.json')
+    failIndex()
+    await (await failedIndex).finished()
+    if (stage === 'open') {
+      await expect(page.getByRole('alert')).toContainText('Could not load firmware versions')
+      await expect(page.getByRole('button', { name: 'Monitor', exact: true })).toBeDisabled()
+      await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeDisabled()
+      await page.evaluate(() => window.continueMonitor())
+    }
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toContain('reader')
+    await page.evaluate(() => window.writeMonitor('Firmware is running'))
+    await expect(page.locator('.flash-console')).toHaveText('Firmware is running')
+    await page.getByRole('button', { name: 'Stop', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual([
+      'request', 'open', 'signals', 'signals', 'reader', 'releaseLock', 'close',
+    ])
+    await expect(page.getByRole('alert')).toContainText('Could not load firmware versions')
+    await expect(page.getByRole('button', { name: 'Monitor', exact: true })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
+  })
+}
+
+for (const failure of ['network', 'http', 'empty']) {
+  test(`monitor works after release index ${failure}`, async ({ page }) => {
+    await serial(page, 'none')
+    await page.route('**/flash/index.json', route => failure === 'network'
+      ? route.abort()
+      : route.fulfill(failure === 'http' ? { status: 503 } : { json: [] }))
+    await page.goto('/flash')
+    if (failure === 'empty') {
+      await expect(page.getByText('No firmware is published yet.')).toBeVisible()
+    } else {
+      await expect(page.getByRole('alert')).toContainText('Could not load firmware versions')
+    }
+    await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeDisabled()
+    await page.getByRole('button', { name: 'Monitor', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Stop', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual([
+      'request', 'open', 'signals', 'signals', 'reader', 'releaseLock', 'close',
+    ])
+    await expect(page.getByRole('button', { name: 'Monitor', exact: true })).toBeEnabled()
+  })
+}
 
 for (const failure of ['network', 'http', 'empty']) {
   test(`release index ${failure} is distinguished and retry works`, async ({ page }) => {

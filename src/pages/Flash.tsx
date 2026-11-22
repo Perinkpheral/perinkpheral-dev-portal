@@ -214,8 +214,8 @@ export function Flash() {
     operation.current = true
     setPhase({ name: 'connecting' })
     try {
-      const { ESPLoader, Transport } = await import('esptool-js')
       const port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ESPRESSIF }] })
+      const { ESPLoader, Transport } = await import('esptool-js')
       transport.current = new Transport(port, false)
       loader.current = new ESPLoader({ transport: transport.current, baudrate: 921600, terminal })
       await loader.current.main()
@@ -417,18 +417,16 @@ export function Flash() {
   let body
   if (!supported) {
     body = <p>{t('Needs Chrome or Edge on a computer.', 'Нужен Chrome или Edge на компьютере.')}</p>
-  } else if (releases === 'failed') {
-    body = <>
-      <p role="alert">{t('Could not load firmware versions. Check your connection and try again.', 'Не удалось загрузить версии прошивки. Проверьте соединение и попробуйте ещё раз.')}</p>
-      <button type="button" className="button" onClick={() => { setReleases(null); setReleaseAttempt((attempt) => attempt + 1) }}>{t('Try again', 'Повторить')}</button>
-    </>
-  } else if (releases === 'none') {
-    body = <p>{t('No firmware is published yet.', 'Прошивка ещё не опубликована.')}</p>
   } else if (phase.name === 'idle' || phase.name === 'connecting' || phase.name === 'monitor-starting') {
     const list = Array.isArray(releases) ? releases : []
     body = (
       <>
-        <div className="flash-choice">
+        {releases === 'failed' ? <>
+          <p role="alert">{t('Could not load firmware versions. Check your connection and try again.', 'Не удалось загрузить версии прошивки. Проверьте соединение и попробуйте ещё раз.')}</p>
+          <button type="button" className="button" disabled={busy} onClick={() => { setReleases(null); setReleaseAttempt((attempt) => attempt + 1) }}>{t('Try again', 'Повторить')}</button>
+        </> : releases === 'none' ? (
+          <p>{t('No firmware is published yet.', 'Прошивка ещё не опубликована.')}</p>
+        ) : <div className="flash-choice">
           <label>
             <span>{t('Version', 'Версия')}</span>
             <select
@@ -480,7 +478,7 @@ export function Flash() {
               </ul>
             </details>
           )}
-        </div>
+        </div>}
         <p>{t('Connect the board to this computer with a USB-C cable.', 'Подключите плату к компьютеру кабелем USB-C.')}</p>
         <div className="buttons">
           <button type="button" className="button" onClick={connect} disabled={busy || !version}>
