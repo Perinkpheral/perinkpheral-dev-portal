@@ -41,11 +41,17 @@ export function image(hashed = true, sizes = [8]) {
   if (hashed) createHash('sha256').update(raw.subarray(0, end)).digest().copy(raw, end)
   return new Uint8Array(raw)
 }
-export function fixture(mode = 'preserve', layout = recovery, flavor = 'release') {
+export function firstInstallOtaData() {
+  const raw = new Uint8Array(8192).fill(255)
+  raw.set(Buffer.from('01000000ffffffffffffffffffffffffffffffffffffffff000000009a984347', 'hex'))
+  return raw
+}
+export function fixture(mode = 'preserve', layout = recovery, flavor = 'release', firstInstall = mode === 'fresh' && layout === recovery) {
   const hasRecovery = layout === recovery
   const entries = [
     ['bootloader.bin', 0, image()], ['partition-table.bin', 0x8000, table(layout)],
-    ['ota_data_initial.bin', 0xf000, new Uint8Array(0x2000).fill(255)],
+    [firstInstall ? 'ota_data_first_install.bin' : 'ota_data_initial.bin', 0xf000,
+      firstInstall ? firstInstallOtaData() : new Uint8Array(0x2000).fill(255)],
     ...(hasRecovery ? [['perink_recovery.bin', 0x20000, image()]] : []),
     ['perinkpheral.bin', hasRecovery ? 0x100000 : 0x20000, image()],
     ...(mode === 'fresh' ? [['apps.bin', 0x350000, new Uint8Array(0xa0000)]] : []),

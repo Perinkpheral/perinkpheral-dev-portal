@@ -77,7 +77,7 @@ const STEPS: [string[], [string, string], [string, string]][] = [
   [ICON.chip, ['Click Connect', 'Нажмите «Подключить»'], ['Pick the board in the list.', 'Выберите плату в списке.']],
   [ICON.save, ['Back up', 'Сохраните копию'], ['Optional: the whole flash.', 'Необязательно: весь флеш.']],
   [ICON.bolt, ['Click Install', 'Нажмите «Установить»'], ['New board: choose Fresh install.', 'Новая плата: «Чистая установка».']],
-  [ICON.signal, ['Start the device', 'Запустите устройство'], ['Press BACK on the recovery screen.', 'Нажмите BACK на экране recovery.']],
+  [ICON.signal, ['Wait for the start', 'Дождитесь запуска'], ['Fresh install starts by itself. Keep data: press BACK.', 'Чистая установка запустится сама. С сохранением данных: BACK.']],
 ]
 
 type Phase =
@@ -91,7 +91,7 @@ type Phase =
   | { name: 'preparing' }
   | { name: 'erasing' }
   | { name: 'writing'; done: number }
-  | { name: 'done'; recovery: boolean; mode: InstallMode }
+  | { name: 'done'; startsMain: boolean; mode: InstallMode }
   | { name: 'error'; message: string }
 
 function Progress({ value }: { value: number }) {
@@ -257,7 +257,7 @@ export function Flash() {
         return { data: new Uint8Array(await answer.arrayBuffer()), address: part.offset }
       }))
       const source = mode === 'preserve' ? await readFlashRange(device, TABLE_ADDRESS, SECTOR_BYTES) : undefined
-      const { recovery } = await validateFiles(parts, files, mode, source)
+      const { startsMain } = await validateFiles(parts, files, mode, source)
       const total = files.reduce((sum, file) => sum + file.data.length, 0)
       const before = files.map((_, index) => files.slice(0, index).reduce((sum, file) => sum + file.data.length, 0))
       writing = true
@@ -277,7 +277,7 @@ export function Flash() {
       })
       await restart()
       await release()
-      setPhase({ name: 'done', recovery, mode })
+      setPhase({ name: 'done', startsMain, mode })
     } catch (error) {
       if (!writing) await restart()
       await release()
@@ -585,10 +585,11 @@ export function Flash() {
     body = (
       <>
         <p>
-          {phase.recovery
-            ? t('Installed. On the recovery screen, press BACK to start the firmware.',
-                'Установлено. На экране recovery нажмите BACK, чтобы запустить прошивку.')
-            : t('Installed. The device restarts and shows a QR code.', 'Установлено. Устройство перезагрузится и покажет QR-код.')}
+          {phase.startsMain
+            ? t('Installed. The device starts automatically and shows the setup screen with a QR code.',
+                'Установлено. Устройство запустится само и покажет экран настройки с QR-кодом.')
+            : t('Installed. On the recovery screen, press BACK to start the firmware.',
+                'Установлено. На экране recovery нажмите BACK, чтобы запустить прошивку.')}
         </p>
         <p>
           {phase.mode === 'preserve'

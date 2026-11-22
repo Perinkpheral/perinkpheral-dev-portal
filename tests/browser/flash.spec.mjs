@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from '@playwright/test'
 import { createHash } from 'node:crypto'
-import { fixture } from '../helpers/flashFixtures.mjs'
+import { fixture, legacy, recovery, table } from '../helpers/flashFixtures.mjs'
 
-const release = { version: '0.1.35', date: '', notes: '', builds: { release: '0.1.35/manifest.json' } }
+const release = { version: '0.1.35', date: '', notes: '', builds: {
+  release: '0.1.35/manifest.json', migration: '0.1.35/migration-manifest.json',
+} }
 const resets = ['bootloader', 'DTR:false', 'RTS:true', 'RTS:false', 'disconnect']
 
-async function serial(page, gate) {
+async function serial(page, gate, data = fixture('fresh')) {
   page.on('pageerror', (error) => { throw error })
   await page.addInitScript(gate => {
     window.serialCalls = []
@@ -48,18 +50,31 @@ async function serial(page, gate) {
   // Only fake transport is ever loaded: tests cannot request real hardware.
   await page.route('**/esptool-js.js*', (route) => route.fulfill({ contentType: 'application/javascript', body: `
     export class Transport {
+      reads = 0
+      async read() {
+        return new Uint8Array(this.reads++ === 0
+          ? ${JSON.stringify(Array.from(table(legacy)))}
+          : ${JSON.stringify(Array.from(createHash('md5').update(table(legacy)).digest()))})
+      }
+      async write() {}
       async disconnect() { window.serialCalls.push('disconnect') }
       async setDTR(value) { window.serialCalls.push('DTR:' + value) }
       async setRTS(value) { window.serialCalls.push('RTS:' + value) }
     }
     export class ESPLoader {
+      constructor({ transport }) { this.transport = transport }
+      async checkCommand() { return 0 }
       chip = { CHIP_NAME: 'ESP32-C6', readMac: async () => 'aa:bb:cc:dd:ee:ff' }
       async main() { window.serialCalls.push('bootloader') }
       async writeFlash(options) {
         window.serialCalls.push('write:start')
+        window.flashWrite = {
+          eraseAll: options.eraseAll,
+          otadata: Array.from(options.fileArray.find(file => file.address === 0xf000).data),
+        }
         await new Promise(resolve => { window.finishWrite = resolve })
         if (window.failWrite) throw new Error('USB disconnected during write')
-        const expected = ${JSON.stringify(fixture('fresh').files.map(file => createHash('md5').update(file.data).digest('hex')))}
+        const expected = ${JSON.stringify(data.files.map(file => createHash('md5').update(file.data).digest('hex')))}
         for (const [index, file] of options.fileArray.entries()) {
           if (options.calculateMD5Hash) {
             if (options.calculateMD5Hash(file.data) !== expected[index] || window.failVerification === index)
@@ -75,7 +90,6 @@ async function serial(page, gate) {
   await page.route('https://perinkpheral.github.io/perinkpheral-os/flash/**', async (route) => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('index.json')) return route.fulfill({ json: [release] })
-    const data = fixture('fresh')
     if (path.endsWith('manifest.json')) return route.fulfill({ json: data.manifest })
     const part = data.parts.findIndex((part) => path.endsWith('/' + part.path))
     if (part < 0) return route.abort()
@@ -83,10 +97,57 @@ async function serial(page, gate) {
   })
 }
 
-async function connect(page) {
-  await page.getByRole('button', { name: 'Connect', exact: true }).click()
+async function connect(page, lang = 'en') {
+  await page.getByRole('button', { name: lang === 'ru' ? 'Подключить' : 'Connect', exact: true }).click()
   await expect(page.getByText('aa:bb:cc:dd:ee:ff')).toBeVisible()
 }
+
+for (const lang of ['en', 'ru']) for (const kind of ['fresh', 'older fresh', 'Keep data']) {
+  test(`${lang} ${kind} shows the instructions for its validated startup behavior`, async ({ page }) => {
+    const mode = kind === 'Keep data' ? 'preserve' : 'fresh'
+    const f = fixture(mode, recovery, 'release', kind === 'fresh')
+    await serial(page, undefined, f)
+    await page.goto(lang === 'ru' ? '/ru/flash' : '/flash')
+    await connect(page, lang)
+    await page.getByRole('combobox', { name: lang === 'ru' ? 'Установка' : 'Install', exact: true }).selectOption(mode)
+    await page.getByRole('button', { name: lang === 'ru' ? 'Установить' : 'Install', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start'])
+    expect(await page.evaluate(() => window.flashWrite)).toEqual({ eraseAll: mode === 'fresh', otadata: Array.from(f.files[2].data) })
+    await page.evaluate(() => window.finishWrite())
+    const body = page.locator('.flasher-body')
+    await expect(body).toContainText(lang === 'ru' ? 'Установлено.' : 'Installed.')
+    if (kind === 'fresh') {
+      await expect(body).toContainText(lang === 'ru' ? 'запустится само' : 'starts automatically')
+      await expect(body).toContainText(lang === 'ru' ? 'экран настройки с QR-кодом' : 'setup screen with a QR code')
+      await expect(body).not.toContainText('BACK')
+    } else {
+      await expect(body).toContainText(lang === 'ru' ? 'нажмите BACK' : 'press BACK')
+      await expect(body).not.toContainText(lang === 'ru' ? 'запустится само' : 'starts automatically')
+    }
+    if (mode === 'preserve') {
+      await expect(body).toContainText(lang === 'ru' ? 'Сохранённые Wi-Fi и приложения' : 'Your saved Wi-Fi and apps')
+    } else {
+      await expect(body).toContainText(lang === 'ru' ? 'отсканируйте QR-код' : 'scan the QR code')
+    }
+    expect(await page.evaluate(() => window.serialCalls)).toEqual(['bootloader', 'write:start', 'write:end', ...resets.slice(1)])
+  })
+}
+
+for (const [name, mutate] of [
+  ['blank journal', data => data.fill(255)],
+  ['recovery hint', data => { data[64] = 0 }],
+  ['second journal entry', data => data.set(data.subarray(0, 32), 4096)],
+]) test(`first-install ${name} is refused before an erase or write`, async ({ page }) => {
+  const f = fixture('fresh')
+  mutate(f.files[2].data)
+  await serial(page, undefined, f)
+  await page.goto('/flash')
+  await connect(page)
+  await page.getByRole('combobox', { name: 'Install', exact: true }).selectOption('fresh')
+  await page.getByRole('button', { name: 'Install', exact: true }).click()
+  await expect(page.getByText('The firmware files do not match a supported layout. Nothing was written.')).toBeVisible()
+  expect(await page.evaluate(() => window.serialCalls)).toEqual(resets)
+})
 
 test('a cold esptool import cannot delay the port chooser past user activation', async ({ page }) => {
   await serial(page)

@@ -94,8 +94,9 @@ export function manifestParts(raw: unknown, version: string, flavor: Flavor, mod
   if (builds.length !== 1 || !Array.isArray(builds[0].parts) || builds[0].parts.length < 5 || builds[0].parts.length > 6) fail()
   const parts = builds[0].parts as Part[]
   const prefix = flavor === 'debug' ? 'debug-' : ''
+  const otaName = mode === 'fresh' ? 'ota_data_(initial|first_install)' : 'ota_data_initial'
   if (parts.some(part => !part || typeof part.path !== 'string' ||
-      !new RegExp(`^${prefix}(bootloader|partition-table|ota_data_initial|perink_recovery|perinkpheral|apps)\\.bin$`).test(part.path) ||
+      !new RegExp(`^${prefix}(bootloader|partition-table|${otaName}|perink_recovery|perinkpheral|apps)\\.bin$`).test(part.path) ||
       !Number.isSafeInteger(part.offset) || part.offset < 0 || part.offset >= FLASH_BYTES || part.offset % SECTOR_BYTES) ||
       new Set(parts.map(part => part.path)).size !== parts.length || new Set(parts.map(part => part.offset)).size !== parts.length) fail()
   return parts
@@ -125,7 +126,13 @@ async function validateImage(data: Uint8Array): Promise<void> {
   }
 }
 
-export async function validateFiles(parts: Part[], files: FlashFile[], mode: InstallMode, source?: Uint8Array): Promise<{ recovery: boolean }> {
+// Sequence 1 selects ota_0 in state NEW, with the sequence-only bootloader CRC.
+// Every other byte, including the second journal sector and recovery hint, is erased.
+const FIRST_INSTALL_OTA_DATA = new Uint8Array(0x2000).fill(0xff)
+FIRST_INSTALL_OTA_DATA.set([1, 0, 0, 0], 0)
+FIRST_INSTALL_OTA_DATA.set([0, 0, 0, 0, 0x9a, 0x98, 0x43, 0x47], 24)
+
+export async function validateFiles(parts: Part[], files: FlashFile[], mode: InstallMode, source?: Uint8Array): Promise<{ recovery: boolean; startsMain: boolean }> {
   if (files.length !== parts.length || files.some((file, index) => file.address !== parts[index].offset || !file.data.length)) fail()
   const table = files.find(file => file.address === TABLE_ADDRESS)
   if (!table) fail()
@@ -137,10 +144,13 @@ export async function validateFiles(parts: Part[], files: FlashFile[], mode: Ins
     if (!source) throw new FlashPlanError('source')
     validateSource(source)
   }
+  const firstInstall = parts.some(part => part.offset === 0xf000 &&
+    part.path.replace(/^debug-/, '') === 'ota_data_first_install.bin')
+  if (firstInstall && (mode !== 'fresh' || !recovery)) fail()
   const expected = [
     { name: 'bootloader.bin', offset: 0, capacity: TABLE_ADDRESS },
     { name: 'partition-table.bin', offset: TABLE_ADDRESS, capacity: SECTOR_BYTES },
-    { name: 'ota_data_initial.bin', offset: 0xf000, capacity: 0x2000 },
+    { name: firstInstall ? 'ota_data_first_install.bin' : 'ota_data_initial.bin', offset: 0xf000, capacity: 0x2000 },
     ...(recovery ? [{ name: 'perink_recovery.bin', offset: 0x20000, capacity: 0xe0000 }] : []),
     { name: 'perinkpheral.bin', offset: recovery ? 0x100000 : 0x20000, capacity: recovery ? 0x200000 : 0x170000 },
     ...(mode === 'fresh' ? [{ name: 'apps.bin', offset: 0x350000, capacity: 0xa0000 }] : []),
@@ -153,9 +163,11 @@ export async function validateFiles(parts: Part[], files: FlashFile[], mode: Ins
     // esptool erases whole sectors, including the last partly written one.
     if (Math.ceil(data.length / SECTOR_BYTES) * SECTOR_BYTES > entry.capacity) fail()
     if (entry.name === 'ota_data_initial.bin' && (data.length !== entry.capacity || !data.every(byte => byte === 0xff))) fail()
+    if (entry.name === 'ota_data_first_install.bin' && (data.length !== FIRST_INSTALL_OTA_DATA.length ||
+        !data.every((byte, index) => byte === FIRST_INSTALL_OTA_DATA[index]))) fail()
     if (entry.name === 'bootloader.bin' || entry.name === 'perink_recovery.bin' || entry.name === 'perinkpheral.bin') {
       await validateImage(data)
     }
   }
-  return { recovery }
+  return { recovery, startsMain: !recovery || firstInstall }
 }

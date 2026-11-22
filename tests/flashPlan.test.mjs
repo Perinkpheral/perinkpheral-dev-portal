@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { manifestPath, manifestParts, releaseUrl, validateFiles, validateSource } from '../src/content/flashPlan.ts'
 
-import { fixture, recovery, legacy, table, image } from './helpers/flashFixtures.mjs'
+import { fixture, recovery, legacy, table, image, firstInstallOtaData } from './helpers/flashFixtures.mjs'
 
 test('missing migration never falls back to an erasing manifest', () => {
   const builds = { release: 'manifest.json', debug: 'debug-manifest.json' }
@@ -18,14 +18,54 @@ for (const flavor of ['release', 'debug']) for (const mode of ['fresh', 'preserv
   test(`${flavor} ${mode} uses matching files and accepts both shipped source layouts`, async () => {
     const f = fixture(mode, recovery, flavor)
     assert.deepEqual(manifestParts(f.manifest, 'v0.1.35', flavor, mode), f.parts)
-    for (const source of [legacy, recovery]) assert.deepEqual(await validateFiles(f.parts, f.files, mode, table(source)), { recovery: true })
+    for (const source of [legacy, recovery]) assert.deepEqual(await validateFiles(f.parts, f.files, mode, table(source)),
+      { recovery: true, startsMain: mode === 'fresh' })
   })
 }
+for (const flavor of ['release', 'debug']) {
+  test(`older ${flavor} recovery-layout fresh installs still accept blank metadata and need BACK`, async () => {
+    const f = fixture('fresh', recovery, flavor, false)
+    assert.deepEqual(manifestParts(f.manifest, 'v0.1.35', flavor, 'fresh'), f.parts)
+    assert.deepEqual(await validateFiles(f.parts, f.files, 'fresh'), { recovery: true, startsMain: false })
+  })
+  test(`${flavor} Keep data rejects first-install metadata in both manifest and file validation`, async () => {
+    const f = fixture('preserve', recovery, flavor, true)
+    assert.throws(() => manifestParts(f.manifest, '0.1.35', flavor, 'preserve'), { message: 'manifest' })
+    await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)), { message: 'manifest' })
+  })
+  test(`${flavor} legacy layout rejects first-install metadata`, async () => {
+    const f = fixture('fresh', legacy, flavor, true)
+    await assert.rejects(() => validateFiles(f.parts, f.files, 'fresh'), { message: 'manifest' })
+  })
+}
+test('first-install metadata rejects a change to any of its 8192 bytes', async () => {
+  const f = fixture('fresh')
+  const data = f.files[2].data
+  for (let index = 0; index < data.length; index += 1) {
+    data[index] ^= 1
+    await assert.rejects(() => validateFiles(f.parts, f.files, 'fresh'), { message: 'manifest' }, `byte ${index}`)
+    data[index] ^= 1
+  }
+})
+for (const [name, mutate] of [
+  ['blank image under first-install name', f => { f.files[2].data.fill(255) }],
+  ['first-install image under blank name', f => { f.parts[2].path = 'ota_data_initial.bin' }],
+  ['truncated image', f => { f.files[2].data = f.files[2].data.subarray(0, 8191) }],
+  ['one sector only', f => { f.files[2].data = f.files[2].data.subarray(0, 4096) }],
+  ['extra byte', f => { f.files[2].data = new Uint8Array([...f.files[2].data, 255]) }],
+  ['second boot record', f => { f.files[2].data.set(firstInstallOtaData().subarray(0, 32), 4096) }],
+  ['unknown metadata name', f => { f.parts[2].path = 'otadata.bin' }],
+  ['another allowed image at OTA address', f => { f.parts[2].path = 'perinkpheral.bin' }],
+  ['wrong metadata address', f => { f.parts[2].offset = 0x11000; f.files[2].address = 0x11000 }],
+]) test(`reject fresh install before erasing: ${name}`, async () => {
+  const f = fixture('fresh'); mutate(f)
+  await assert.rejects(() => validateFiles(f.parts, f.files, 'fresh'), { message: 'manifest' })
+})
 test('old releases still support an explicit fresh install', async () => {
   const f = fixture('fresh', legacy)
   delete f.manifest.new_install_prompt_erase
   manifestParts(f.manifest, '0.1.35', 'release', 'fresh')
-  assert.deepEqual(await validateFiles(f.parts, f.files, 'fresh'), { recovery: false })
+  assert.deepEqual(await validateFiles(f.parts, f.files, 'fresh'), { recovery: false, startsMain: true })
   await assert.rejects(() => validateFiles(f.parts, f.files, 'preserve', table(legacy)))
 })
 for (const [name, mutate] of [
@@ -87,7 +127,7 @@ for (const hashed of [false, true]) {
   test(`complete multi-segment images pass with appended SHA: ${hashed}`, async () => {
     const f = fixture()
     for (const index of [0, 3, 4]) f.files[index].data = image(hashed, [4, 0, 16])
-    assert.deepEqual(await validateFiles(f.parts, f.files, 'preserve', table(legacy)), { recovery: true })
+    assert.deepEqual(await validateFiles(f.parts, f.files, 'preserve', table(legacy)), { recovery: true, startsMain: false })
   })
 }
 for (const index of [0, 3, 4]) for (const [name, mutate] of [
