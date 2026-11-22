@@ -395,7 +395,7 @@ const PHRASES = [
   { en: 'Apps included', ru: 'С приложениями' },
   { en: 'Cloudless', ru: 'Без облака' },
   { en: 'Open source', ru: 'Открытый код' },
-  { en: 'Made to be built', ru: 'Собирается за вечер' },
+  { en: 'Made to be built', ru: 'Для самостоятельной сборки' },
 ]
 
 // A kit to buy: not yet. The button looks off, and a press says so.
@@ -497,7 +497,7 @@ export function Home() {
                 </svg>
               </span>
               <div className="app-name">
-                <h3>{t('Your own', 'Что угодно')}</h3>
+                <h3>{t('Your own', 'Своё приложение')}</h3>
               </div>
             </Link>
           </div>

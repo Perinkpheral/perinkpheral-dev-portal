@@ -127,7 +127,7 @@ export function Sdk() {
               [t('Language', 'Язык'), t('C, compiled to WebAssembly', 'C, компилируется в WebAssembly')],
               ['ABI', '3 · firmware 0.1.30+'],
               ['API', <a href={files.hostApi}>sdk/host_api.h</a>],
-              [t('Memory', 'Память'), t('64 KB per app', '64 КБ на приложение')],
+              [t('Memory', 'Память'), t('64 KiB of linear memory per app', '64 КиБ линейной памяти на приложение')],
               [t('Numbers', 'Числа'), t('No floating point; decimals as fixed-point numbers', 'Без плавающей точки; дробные - числами с фиксированной точкой')],
               [t('Package', 'Пакет'), t('app.wasm, manifest.json, translations, pictures, files', 'app.wasm, manifest.json, переводы, картинки, файлы')],
             ]}
@@ -142,7 +142,7 @@ export function Sdk() {
               <Code label="shell">{`
 git clone ${repo.firmware}.git
 cd perinkpheral-os
-export WASI_SDK_PATH=$HOME/opt/wasi-sdk
+export WASI_SDK_PATH="<wasi-sdk directory>"
 tools/perinkpheral
 `}</Code>
             </li>
@@ -191,11 +191,12 @@ tools/perinkpheral log --follow
               [<code>fullscreen</code>, t('Use the whole screen, without the top bar', 'Весь экран, без верхней строки')],
               [<code>writes_files</code>, t('The app saves files; 32 KB are reserved for it', 'Приложение пишет файлы; под них зарезервировано 32 КБ')],
               [<code>system</code>, t('Access to device settings, clock and apps; the user confirms on install', 'Доступ к настройкам устройства, часам и приложениям; пользователь подтверждает при установке')],
-              [<code>certificates</code>, t('Certificates for servers that browsers do not trust', 'Сертификаты для серверов, которым не доверяют браузеры')],
-              [<code>companion</code>, t('A web page that helps the user set the app up', 'Веб-страница, которая помогает настроить приложение')],
-              [<code>firmware</code>, t('The oldest firmware the app runs on; the build works it out from the calls it makes', 'Самая старая прошивка, на которой работает приложение; сборка вычисляет её по вызовам')],
+              [<code>certificates</code>, t('Up to two additional CA certificates, PEM or DER, at most 4 KiB each; currently valid and trusted only for this application’s requests.', 'До двух дополнительных сертификатов CA в PEM или DER, не более 4 КиБ каждый; действующих и используемых только для запросов этого приложения.')],
+              [<code>companion</code>, t('An HTTPS companion page that supplies settings through the device page; the user saves the resulting form.', 'HTTPS-страница настройки, передающая значения в форму страницы устройства; пользователь сохраняет заполненную форму.')],
+              [<code>firmware</code>, t('Minimum firmware version, computed from the ABI floor, imports, exports, recognized manifest features and any higher explicit minimum.', 'Минимальная версия прошивки, вычисляемая по версии ABI, импортам, экспортам, распознаваемым возможностям манифеста и явно указанному более высокому минимуму.')],
             ]}
           />
+          <p>{t('Polls default to GET. The method field also accepts POST, PUT, DELETE, PATCH, HEAD, PROPFIND and REPORT. Non-GET methods and bodies require firmware 0.1.80. Bodies are limited to 1024 bytes before and after template expansion; GET and HEAD cannot have a body. Polls can run at startup, after reconnection and through poll_run(), so state-changing endpoints must tolerate repeated requests.', 'По умолчанию используется GET. Поле method также принимает POST, PUT, DELETE, PATCH, HEAD, PROPFIND и REPORT. Методы кроме GET и тела запросов требуют прошивку 0.1.80. Тело ограничено 1024 байтами до и после подстановки значений; GET и HEAD не допускают тела. Опросы могут выполняться при запуске, после восстановления сети и через poll_run(), поэтому изменяющие состояние обработчики должны допускать повторные запросы.')}</p>
         </Chapter>
 
         <Chapter chapter={model}>
@@ -204,9 +205,9 @@ tools/perinkpheral log --follow
             rows={[
               [<code>app_on_load()</code>, t('The app starts', 'Приложение запускается')],
               [<code>app_on_focus() / app_on_blur()</code>, t('The app appears on screen or leaves it', 'Приложение появляется на экране или уходит с него')],
-              [<code>app_on_terminate()</code>, t('The app is about to close: save state here', 'Приложение сейчас закроется: здесь сохраняют состояние')],
+              [<code>app_on_terminate()</code>, t('Last call before normal unloading; save persistent state here. Not called after a fault or for light sleep.', 'Последний вызов перед штатной выгрузкой; здесь сохраняют постоянное состояние. После сбоя и при лёгком сне не вызывается.')],
               [<code>app_on_button(event)</code>, t('A button is pressed, released, or held', 'Кнопку нажали, отпустили или удерживают')],
-              [<code>app_on_back()</code>, t('BACK is pressed, for apps with several pages', 'Нажата BACK, для приложений с несколькими страницами')],
+              [<code>app_on_back()</code>, t('A short BACK press. Without this handler, Perinkpheral OS closes the app. Long BACK opens the menu; BACK with UP or DOWN switches applications.', 'Короткое нажатие BACK. Без этого обработчика Perinkpheral OS закрывает приложение. Долгое нажатие BACK открывает меню; BACK вместе с UP или DOWN переключает приложения.')],
               [<code>app_on_draw()</code>, t('The screen needs drawing', 'Нужно нарисовать экран')],
               [<code>app_on_timer(id)</code>, t('A timer fired, while the app is on screen', 'Сработал таймер, пока приложение на экране')],
               [<code>app_on_alarm(id)</code>, t('An alarm fired, even if the app is closed', 'Сработал будильник, даже если приложение закрыто')],
@@ -217,6 +218,7 @@ tools/perinkpheral log --follow
               [<code>app_on_installed() / app_on_updated()</code>, t('First start after install or update', 'Первый запуск после установки или обновления')],
             ]}
           />
+          <p>{t('Alarms are cleared by device restarts and application updates; restore them in the started intent and app_on_updated().', 'Перезапуск устройства и обновление приложения удаляют будильники; восстанавливайте их в обработчиках события started и app_on_updated().')}</p>
           <h3>{t('Buttons and state', 'Кнопки и состояние')}</h3>
           <Facts
             rows={[
@@ -224,6 +226,7 @@ tools/perinkpheral log --follow
               [t('Saved data', 'Сохранённые данные'), 'kv_set(), kv_get()'],
             ]}
           />
+          <p>{t('Keep persistent data in KV. Save temporary navigation and unfinished edits with session_set() in app_on_blur() and restore them with session_get() in app_on_focus(). Sessions survive unloads while the app remains in the stack; leaving the stack or restarting the device clears them. Sessions hold up to 1024 bytes; using more than 128 bytes requires an explicit firmware minimum of 0.1.61.', 'Постоянные данные храните в KV. Временное состояние навигации и незавершённые изменения сохраняйте через session_set() в app_on_blur() и восстанавливайте через session_get() в app_on_focus(). Сессии сохраняются при выгрузке, пока приложение остаётся в стеке; выход из стека или перезапуск устройства удаляет их. Сессия вмещает до 1024 байт; для объёма более 128 байт явно укажите минимальную прошивку 0.1.61.')}</p>
         </Chapter>
 
         <Chapter chapter={data}>
@@ -233,7 +236,7 @@ tools/perinkpheral log --follow
               [t('On demand', 'По запросу'), t('http_send() from the code', 'http_send() из кода')],
               [t('Ready values', 'Готовые значения'), t('List JSON paths in "pick": app_on_picked() gets the values', 'Пути JSON в "pick": app_on_picked() получает значения')],
               [t('Raw response', 'Ответ как есть'), t('Without "pick": app_on_data() gets the response piece by piece', 'Без "pick": app_on_data() получает ответ частями')],
-              [t('Show on screen', 'Показать на экране'), t('screen_request() asks to open the app when its data arrives; once in 30 s', 'screen_request() просит открыть приложение, когда пришли данные; раз в 30 с')],
+              [t('Show on screen', 'Показать на экране'), t('screen_request() requests foreground display from a background handler. Refused within 30 seconds of a button press or a previous grant, or while a confirmation question is open. Refused requests are not retried.', 'screen_request() запрашивает вывод приложения из фонового обработчика. Запрос отклоняется в течение 30 секунд после нажатия кнопки или предыдущего разрешения, а также при открытом вопросе подтверждения. Отклонённые запросы не повторяются.')],
             ]}
           />
           <Code label="weather.c">{VALUES}</Code>
@@ -260,19 +263,20 @@ tools/perinkpheral log --follow
           <Table
             head={[t('What', 'Что'), t('Limit', 'Предел')]}
             rows={[
-              [t('App size', 'Размер приложения'), '48 KB'],
-              [t('Memory', 'Память'), '64 KB'],
+              [t('Module file', 'Файл модуля'), t('48 KiB', '48 КиБ')],
+              [t('Linear memory', 'Линейная память'), t('64 KiB, including stack, static data and application allocations', '64 КиБ, включая стек, статические данные и память приложения')],
               [t('Time per call', 'Время на вызов'), '3 s'],
-              [t('Saved data', 'Сохранённые данные'), t('2 KB, up to 1 KB per value', '2 КБ, до 1 КБ на значение')],
-              [t('Files', 'Файлы'), t('64 KB in the package; 32 KB if the app writes files', '64 КБ в пакете; 32 КБ, если приложение пишет файлы')],
+              [t('Saved data', 'Сохранённые данные'), t('2 KiB including settings and storage overhead; at most 1 KiB per value. Each key costs 64 bytes plus its value rounded up to 32 bytes.', '2 КиБ вместе с настройками и накладными расходами; до 1 КиБ на значение. Каждый ключ занимает 64 байта плюс размер значения, округлённый вверх до 32 байт.')],
+              [t('Files', 'Файлы'), t('64 KiB for package files, charged in whole 4 KiB blocks per file. Applications that write files share 32 KiB between package and runtime files.', '64 КиБ для файлов пакета; каждый файл учитывается целыми блоками по 4 КиБ. Приложения с записью файлов делят 32 КиБ между файлами пакета и создаваемыми файлами.')],
               [t('Scheduled requests', 'Запросы по расписанию'), t('4, every 10 s to 1 day', '4, от 10 с до суток')],
-              [t('Requests waiting', 'Запросов в очереди'), t('16 an app, one at a time', '16 на приложение, по одному')],
+              [t('Requests waiting', 'Запросов в очереди'), t('At most 16 waiting per app; all apps share a 16 KiB queue budget. One request runs at a time for the device.', 'До 16 ожидающих запросов на приложение; общая очередь всех приложений ограничена 16 КиБ. Устройство выполняет один запрос за раз.')],
               [t('Response size', 'Размер ответа'), t('256 KB parsed, 4 MB piece by piece', '256 КБ с разбором, 4 МБ частями')],
               [t('Settings', 'Настройки'), t('8, values up to 255 bytes', '8, значения до 255 байт')],
               [t('Timers and alarms', 'Таймеры и будильники'), t('4 and 4', '4 и 4')],
               [t('Apps on a device', 'Приложений на устройстве'), t('Up to 24, while there is space', 'До 24, пока хватает места')],
             ]}
           />
+          <p>{t('The interpreter has a separate 64 KiB limit. Check the build’s memory report and verify interpreter headroom on a device.', 'Интерпретатор имеет отдельный лимит 64 КиБ. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.')}</p>
         </Chapter>
 
         <Chapter chapter={tools}>
@@ -286,7 +290,7 @@ tools/perinkpheral log --follow
               [<code>serve [app]</code>, t('A page with the device screen, buttons and log', 'Страница с экраном устройства, кнопками и логом')],
               [<code>shot / press / open</code>, t('Screenshot, press buttons, open an app', 'Скриншот, нажатия кнопок, открыть приложение')],
               [<code>log [--follow]</code>, t('Device log', 'Лог устройства')],
-              [<code>set &lt;app&gt; &lt;key&gt; &lt;value&gt;</code>, t('Change an app setting', 'Изменить настройку приложения')],
+              [<code>set &lt;app&gt; &lt;key&gt; &lt;value&gt;</code>, t('Write an application KV value; requires Debug firmware. For declared settings on release firmware, use the device page or /api/apps/settings.', 'Записать значение KV приложения; требуется прошивка Debug. Для объявленных настроек в релизной прошивке используйте страницу устройства или /api/apps/settings.')],
               [<code>catalog &lt;folder&gt; --out &lt;dir&gt;</code>, t('Build a catalog', 'Собрать каталог')],
               [<code>publish &lt;folder&gt; --repo owner/repository</code>, t('Publish to your GitHub repository', 'Опубликовать в своём репозитории GitHub')],
               [<code>strings export / import</code>, t('Translations as a spreadsheet', 'Переводы таблицей')],
@@ -321,7 +325,7 @@ tools/perinkpheral log --follow
         <Chapter chapter={reference}>
           <div className="grid">
             <a className="panel" href={repo.firmware}>
-              <h3>perinkpheral</h3>
+              <h3>perinkpheral-os</h3>
               <p className="dim">{t('SDK, tools, firmware.', 'SDK, инструменты, прошивка.')}</p>
             </a>
             <a className="panel" href={repo.apps}>

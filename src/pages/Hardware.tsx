@@ -145,8 +145,8 @@ export function Hardware() {
               <h3>{t('Antenna', 'Антенна')}</h3>
               <p>
                 {t(
-                  'Stick the antenna inside the base cover, away from the battery, and plug it into the XIAO.',
-                  'Приклейте антенну внутри крышки основания, подальше от аккумулятора, и подключите к XIAO.',
+                  'Stick the antenna inside the base cover, away from the battery, and plug it into the XIAO. The standard firmware uses the ceramic antenna. To use the external antenna, build with APP_ANTENNA_EXTERNAL enabled.',
+                  'Приклейте антенну внутри крышки основания, подальше от аккумулятора, и подключите к XIAO. Стандартная прошивка использует керамическую антенну. Для внешней антенны соберите прошивку с включённым APP_ANTENNA_EXTERNAL.',
                 )}
               </p>
             </li>

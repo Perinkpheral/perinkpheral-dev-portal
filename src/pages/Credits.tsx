@@ -17,7 +17,7 @@ export function Credits() {
               rows={[
                 [t('Author', 'Автор'), author.name],
                 [t('License', 'Лицензия'), <a href={files.license}>MIT</a>],
-                ['Firmware, SDK, hardware', <a href={repo.firmware}>perinkpheral</a>],
+                ['Firmware, SDK, hardware', <a href={repo.firmware}>perinkpheral-os</a>],
                 [t('Applications', 'Приложения'), <a href={repo.apps}>perinkpheral-apps</a>],
               ]}
             />
@@ -75,10 +75,15 @@ export function Credits() {
             <Table
               head={[t('Source', 'Источник'), t('Used by', 'Где используется')]}
               rows={[
-                [<a href="https://open-meteo.com">Open-Meteo</a>, 'weather'],
+                [<a href="https://open-meteo.com">Open-Meteo</a>, 'weather, air'],
                 [<a href="https://finance.yahoo.com">Yahoo Finance</a>, 'stocks'],
                 [<a href="https://www.moex.com">{t('Moscow Exchange', 'Московская биржа')}</a>, 'stocks'],
-                [<a href="https://spbexchange.ru">{t('SPB Exchange', 'СПБ Биржа')}</a>, 'stocks'],
+                ['Where the ISS at?', 'iss'],
+                ['CBR-XML-Daily', 'rates'],
+                ['Bank of Russia', 'rates, metals'],
+                [t('User-selected Statuspage services', 'Сервисы Statuspage, выбранные пользователем'), 'status'],
+                [t('User-selected calendar provider', 'Поставщик календаря, выбранный пользователем'), 'calendar'],
+                [t("User's Home Assistant instance", 'Экземпляр Home Assistant пользователя'), 'ha'],
                 [<a href="https://photon.komoot.io">Photon</a>, t('device web UI: place search', 'страница устройства: поиск места')],
                 [<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, t('place data for Photon, ODbL', 'данные мест для Photon, ODbL')],
               ]}

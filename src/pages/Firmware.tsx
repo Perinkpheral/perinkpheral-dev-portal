@@ -25,12 +25,12 @@ export function Firmware() {
         <Chapter chapter={overview}>
           <Facts
             rows={[
-              ['Chip', 'ESP32-C6'],
-              ['Apps', 'Up to 24'],
-              ['Network', 'Wi-Fi 6, HTTP, HTTPS'],
-              ['Updates', 'Over Wi-Fi'],
-              ['Languages', 'English, Russian'],
-              ['Source', <a href={repo.firmware}>Perinkpheral/perinkpheral-os</a>],
+              [t('Chip', 'Микроконтроллер'), 'ESP32-C6'],
+              [t('Apps', 'Приложения'), t('Up to 24', 'До 24')],
+              [t('Network', 'Сеть'), 'Wi-Fi 6, HTTP, HTTPS'],
+              [t('Updates', 'Обновления'), t('Over Wi-Fi', 'По Wi-Fi')],
+              [t('Languages', 'Языки'), t('English, Russian', 'Английский, русский')],
+              [t('Source', 'Исходный код'), <a href={repo.firmware}>Perinkpheral/perinkpheral-os</a>],
             ]}
           />
         </Chapter>
@@ -60,8 +60,8 @@ export function Firmware() {
             'Страница скачивает прошивку и перезапускает устройство в recovery. Экран показывает подготовку, затем просит нажать OK для установки. Настройки и приложения сохраняются.',
           )}</p>
           <p>{t(
-            'If the new firmware fails to start or pass its initial network checks, the device returns to recovery; the previous firmware is not kept. A later network outage does not trigger recovery.',
-            'Если новая прошивка не запускается или не проходит начальную проверку сети, устройство возвращается в recovery; предыдущая прошивка не сохраняется. Последующая потеря сети не вызывает переход в recovery.',
+            'A new image must start its web server and join saved Wi-Fi within three minutes. With no saved network, its setup access point must be up after 20 seconds of uptime. With Wi-Fi deliberately disabled, the web server and 20 seconds of uptime suffice. Otherwise the device returns to recovery. The previous firmware is not kept. A later network outage does not trigger recovery.',
+            'Новый образ должен запустить веб-сервер и подключиться к сохранённой сети Wi-Fi в течение трёх минут. Без сохранённой сети после 20 секунд работы должна быть включена точка доступа настройки. При намеренно отключённом Wi-Fi достаточно веб-сервера и 20 секунд работы. Иначе устройство возвращается в recovery. Предыдущая прошивка не сохраняется. Последующая потеря сети не вызывает переход в recovery.',
           )}</p>
           <p>{t(
             'Moving from the old two-slot firmware needs USB once. In the browser flasher, choose Keep data. It checks the existing layout before writing. After installation, press BACK on the recovery screen to start the firmware.',
@@ -80,8 +80,8 @@ export function Firmware() {
             'Recovery всегда открывает сеть perink-recovery со страницей по адресу 192.168.4.1 и также подключается к сохранённому Wi-Fi, когда он доступен. На странице можно загрузить .bin основной прошивки.',
           )}</p>
           <p>{t(
-            'Manual entry or recovery after a failed boot shows connection instructions; a planned update shows them only if preparation takes more than 30 seconds.',
-            'При ручном входе или после неудачного запуска экран показывает инструкции подключения; при запланированном обновлении они появляются, только если подготовка длится больше 30 секунд.',
+            'With saved Wi-Fi, recovery allows up to 30 seconds for connection: planned updates show preparation, and manual recovery shows Connecting until connected. Without saved Wi-Fi, connection instructions appear immediately. An active upload keeps the preparation screen until confirmation.',
+            'При сохранённой сети recovery отводит до 30 секунд на подключение: запланированное обновление показывает подготовку, ручной вход - подключение до его завершения. Без сохранённой сети инструкции подключения появляются сразу. Во время загрузки экран подготовки сохраняется до подтверждения.',
           )}</p>
           <p>{t(
             'BACK, labelled Exit recovery, attempts to start the installed main firmware. A damaged image must be replaced first.',

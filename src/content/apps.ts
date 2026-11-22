@@ -24,8 +24,8 @@ export const APPS: App[] = [
   },
   {
     name: 'ha',
-    title: 'Home Assistant',
-    titleRu: 'Home Assistant',
+    title: 'HA Companion',
+    titleRu: 'HA Companion',
     icon: ['.....#.....', '....###....', '...#####...', '..#######..', '.#########.', '###########', '.##.....##.', '.##.###.##.', '.##.###.##.', '.##.###.##.', '.#########.'],
   },
   {

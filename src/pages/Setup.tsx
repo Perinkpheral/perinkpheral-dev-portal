@@ -24,7 +24,7 @@ export function Setup() {
             </li>
             <li>
               <h3>{t('Choose your home network', 'Выберите домашнюю сеть')}</h3>
-              <p>{t('On the web page, open Settings → Network. Enter the name (SSID) and password of your 2.4 GHz Wi-Fi network, then click Connect.', 'На веб-странице откройте «Настройки → Сеть». Введите имя (SSID) и пароль своей сети Wi-Fi 2,4 ГГц и нажмите «Подключить».')}</p>
+              <p>{t('Open Settings - Network. Click Scan networks and select your 2.4 GHz network, or choose Enter network name to type its SSID. Enter the password and click Connect.', 'Откройте «Настройки - Сеть». Нажмите «Найти сети» и выберите свою сеть 2,4 ГГц либо выберите «Ввести название сети» для ручного ввода SSID. Введите пароль и нажмите «Подключить».')}</p>
               <p>{t('Press OK on the device when it asks for confirmation.', 'Когда устройство попросит подтверждение, нажмите на нём OK.')}</p>
             </li>
             <li>
@@ -40,6 +40,7 @@ export function Setup() {
           </div>
         </Chapter>
         <Chapter chapter={apps}>
+          <p>{t('A fresh installation includes Weather, Clock, ISS, Calendar, Timer, Stopwatch, Stocks and Air quality. Configure these under Installed apps. Use Catalog to install additional applications.', 'Чистая установка включает Weather, Clock, ISS, Calendar, Timer, Stopwatch, Stocks и Air quality. Настройте их в разделе «Мои приложения». Дополнительные приложения устанавливаются из каталога.')}</p>
           <ol className="steps">
             <li>
               <h3>{t('Choose an app', 'Выберите приложение')}</h3>

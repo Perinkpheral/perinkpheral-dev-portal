@@ -89,7 +89,7 @@ function Diagram({ width, height, label, children }: { width: number; height: nu
 export function LayersDiagram() {
   const t = useT()
   return (
-    <Diagram width={760} height={560} label={t('The layers of Perinkpheral OS; recovery is a separate image', 'Слои Perinkpheral OS; recovery — отдельный образ')}>
+    <Diagram width={760} height={560} label={t('The layers of Perinkpheral OS; recovery is a separate image', 'Слои Perinkpheral OS; recovery - отдельный образ')}>
       <Box x={10} y={10} w={530} h={50} title={t('Apps', 'Приложения')} sub={t('Including Settings, About and setup', 'В том числе настройки, информация и подключение')} filled />
       <Box x={10} y={74} w={530} h={40} title="host_api · ABI 3" />
       <Box x={10} y={128} w={530} h={50} title="wasm3" sub={t('One loaded app instance', 'Один загруженный экземпляр приложения')} />
