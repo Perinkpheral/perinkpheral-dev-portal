@@ -7,7 +7,7 @@
     }
   },
   "steps": [
-    "wait 3",
+    "wait 10",
     "shot iss"
   ],
   "clock": true

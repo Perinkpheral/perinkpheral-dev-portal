@@ -8,11 +8,11 @@
   },
   "mocks": {
     "https://api.open-meteo.com/*": {
-      "body": "{\"current\":{\"temperature_2m\":-3.4,\"weather_code\":71,\"wind_speed_10m\":12.6},\"daily\":{\"weather_code\":[71,3,61],\"temperature_2m_max\":[-1.2,2.0,4.5],\"temperature_2m_min\":[-6.8,-4.1,0.3],\"precipitation_probability_max\":[80]}}"
+      "body": "{\"current\":{\"temperature_2m\":-3.4,\"weather_code\":71,\"wind_speed_10m\":12.6},\"daily\":{\"weather_code\":[71,3,61],\"temperature_2m_max\":[-1.2,2.0,4.5],\"temperature_2m_min\":[-6.8,-4.1,0.3],\"precipitation_probability_max\":[80,20,60],\"time\":[\"2026-11-16\",\"2026-11-17\",\"2026-11-18\"]},\"utc_offset_seconds\":10800}"
     }
   },
   "steps": [
-    "wait 3",
+    "wait 10",
     "shot weather"
   ],
   "clock": true

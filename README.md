@@ -68,14 +68,17 @@ wasi-sdk 34 (`WASI_SDK_PATH`), ffmpeg and cwebp. By default it uses sibling chec
 `../perinkpheral-os` and `../perinkpheral-apps`; override them with `PERINKPHERAL` and
 `PERINKPHERAL_APPS`. CI checks out both repositories' `main` and runs this before
 building the site. `public/screens/sources.json` records the exact revisions used.
-After an application release, run the portal's CI workflow on `main` to regenerate
-the showcase and publish it without making an empty source commit. Runs on other
+After an application release that changes a showcase frame, update and review the
+pictures and commit them; the CI run of that commit publishes the new showcase. Runs on other
 branches and pull requests only build and check.
 
 The inputs in `assets/showcase/` fix the time, settings and mock responses. All values
 are demonstration data, including NVIDIA's rising price series; no live accounts or
 market data are used. Frames are generated in temporary folders, separate from the
-applications' reviewed regression baselines. The generated app screens and case
+applications' reviewed regression baselines, and each is compared with its reviewed
+picture, `assets/showcase/<name>.png`: a frame that differs fails the build and nothing
+is published. After a deliberate change, `npm run screens -- --update` writes the
+pictures anew; look at each one before committing it. The generated app screens and case
 composites are ignored by git and included in the deployed site.
 
 `assets/renders/` holds three blank case views at 1600 x 1067, encoded as lossless WebP.

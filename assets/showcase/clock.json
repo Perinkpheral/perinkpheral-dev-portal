@@ -2,7 +2,7 @@
   "at": 1794832230,
   "tz": "Europe/Moscow",
   "steps": [
-    "wait 3",
+    "wait 10",
     "shot clock"
   ],
   "clock": true

@@ -13,7 +13,7 @@
     }
   },
   "steps": [
-    "wait 3",
+    "wait 10",
     "shot air"
   ],
   "clock": true
