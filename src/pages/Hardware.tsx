@@ -32,7 +32,7 @@ export function Hardware() {
               [t('Size', 'Размер'), t('111.5 x 103.5 x 86.5 mm with the feet', '111.5 x 103.5 x 86.5 мм с ножками')],
               [t('Board', 'Плата'), 'Seeed Studio XIAO ESP32-C6'],
               [t('Display', 'Экран'), t('Waveshare 4.2" e-Paper Module V2, 400 x 300 pixels', 'Waveshare 4.2" e-Paper Module V2, 400 x 300 точек')],
-              [t('Battery', 'Аккумулятор'), t('Li-Ion 3.7 V, charges over USB-C', 'Li-Ion 3.7 В, заряжается по USB-C')],
+              [t('Battery', 'Аккумулятор'), t('Li-Ion 3.7 V, charges over USB-C; battery life unspecified in version 1', 'Li-Ion 3.7 В, заряжается по USB-C; время работы в версии 1 не указано')],
               [t('Screws', 'Винты'), 'M2.5'],
               [t('Tools', 'Инструменты'), t('Soldering iron, screwdriver, FDM printer', 'Паяльник, отвёртка, FDM-принтер')],
             ]}

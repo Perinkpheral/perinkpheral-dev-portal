@@ -228,8 +228,8 @@ const SPECS: { en: string; ru: string; value: string; valueRu: string; icon: str
   {
     en: 'Power',
     ru: 'Питание',
-    value: 'Battery, USB-C',
-    valueRu: 'Аккумулятор, USB-C',
+    value: 'Battery or USB-C; battery life unspecified in version 1',
+    valueRu: 'Аккумулятор или USB-C; время работы в версии 1 не указано',
     icon: [
       '................................................................',
       '................................................................',
