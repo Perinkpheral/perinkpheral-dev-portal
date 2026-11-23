@@ -81,7 +81,6 @@ export function Credits() {
                 ['Where the ISS at?', 'iss'],
                 ['CBR-XML-Daily', 'rates'],
                 ['Bank of Russia', 'rates, metals'],
-                [t('User-selected Statuspage services', 'Сервисы Statuspage, выбранные пользователем'), 'status'],
                 [t('User-selected calendar provider', 'Поставщик календаря, выбранный пользователем'), 'calendar'],
                 [t("User's Home Assistant instance", 'Экземпляр Home Assistant пользователя'), 'ha'],
                 [<a href="https://photon.komoot.io">Photon</a>, t('device web UI: place search', 'страница устройства: поиск места')],
