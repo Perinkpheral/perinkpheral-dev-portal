@@ -18,7 +18,7 @@ export function PrintCase() {
     [t('Base cover', 'Крышка основания'), '1', 'PLA/PETG/ABS', caseFiles.base],
     [t('Bottom', 'Дно'), '1', 'PLA/PETG/ABS', caseFiles.bottom],
     [t('Corner bracket', 'Уголок'), '1', 'PLA/PETG/ABS', caseFiles.bracket],
-    [t('Button caps', 'Колпачки кнопок'), '4', 'PLA/PETG/ABS', caseFiles.caps],
+    [t('Button caps', 'Колпачки кнопок'), '4', 'PLA/PETG/ABS/TPU', caseFiles.caps],
     [t('Feet', 'Ножки'), '6', 'TPU', caseFiles.feet],
   ]
 
