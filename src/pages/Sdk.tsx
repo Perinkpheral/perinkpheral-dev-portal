@@ -276,7 +276,7 @@ tools/perinkpheral log --follow
               [t('Apps on a device', 'Приложений на устройстве'), t('Up to 24, while there is space', 'До 24, пока хватает места')],
             ]}
           />
-          <p>{t('The interpreter has a separate 64 KiB limit. Check the build’s memory report and verify interpreter headroom on a device.', 'Интерпретатор имеет отдельный лимит 64 КиБ. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.')}</p>
+          <p>{t('The interpreter has a separate 80 KiB arena within the 144 KiB application area reserved at startup. The build warns when estimated interpreter use exceeds 80 KiB. Check the build’s memory report and verify interpreter headroom on a device.', 'Интерпретатору выделена отдельная арена 80 КиБ внутри области приложения размером 144 КиБ, резервируемой при запуске. Сборка предупреждает, если оценка памяти интерпретатора превышает 80 КиБ. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.')}</p>
         </Chapter>
 
         <Chapter chapter={tools}>
