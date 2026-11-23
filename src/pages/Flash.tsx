@@ -77,7 +77,7 @@ const STEPS: [string[], [string, string], [string, string]][] = [
   [ICON.chip, ['Click Connect', 'Нажмите «Подключить»'], ['Pick the board in the list.', 'Выберите плату в списке.']],
   [ICON.save, ['Back up', 'Сохраните копию'], ['Optional: the whole flash.', 'Необязательно: весь флеш.']],
   [ICON.bolt, ['Click Install', 'Нажмите «Установить»'], ['New board: choose Fresh install.', 'Новая плата: «Чистая установка».']],
-  [ICON.signal, ['Wait for the start', 'Дождитесь запуска'], ['Fresh install starts by itself. Keep data: press BACK.', 'Чистая установка запустится сама. С сохранением данных: BACK.']],
+  [ICON.signal, ['Wait for the start', 'Дождитесь запуска'], ['Keep data: press BACK.', 'С сохранением данных: BACK.']],
 ]
 
 type Phase =

@@ -465,8 +465,18 @@ main > .wrap > .guide-nav {
   @include phone {
     overflow: visible;
 
-    table {
+    // blocks of the page's width: a long command breaks instead of pushing the page sideways
+    table,
+    tbody {
+      display: block;
+      width: 100%;
       min-width: 0;
+    }
+
+    td,
+    td code {
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     thead {

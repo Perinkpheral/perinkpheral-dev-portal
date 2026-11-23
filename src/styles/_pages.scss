@@ -441,13 +441,17 @@
     min-width: 1.4rem;
   }
 
-  // a line, never more
+  // a line, never more; on a phone the whole instruction, over two lines if it must
   p {
     margin: 0;
     font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    @include phone {
+      white-space: normal;
+    }
   }
 }
 
