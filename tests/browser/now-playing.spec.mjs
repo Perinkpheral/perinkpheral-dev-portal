@@ -61,6 +61,7 @@ for (const locale of ['en-US','ru-RU']) {
       await popup.locator('#server-auth').fill('Bearer proxy-key')
       await popup.locator('#fill').click()
       await expect(popup.getByText(russian ? 'Вернитесь во вкладку устройства. Проверьте поля и нажмите «Сохранить».' : 'Return to your device tab. Review the fields and select Save.')).toBeVisible()
+      await expect.poll(() => page.evaluate(() => window.received.length)).toBe(2)
       const messages = await page.evaluate(()=>window.received)
       const {connection,...fields} = messages[1].values
       expect(fields).toEqual({server:pms, player:'', token:'manual-scoped-key', player_token:'none', refresh:'30 s', server_auth:'Bearer proxy-key'})
@@ -118,6 +119,7 @@ for (const locale of ['en-US','ru-RU']) {
       await popup.locator('#fill').click()
       await expect(popup.getByText(russian ? 'Вернитесь во вкладку устройства. Проверьте поля и нажмите «Сохранить».' : 'Return to your device tab. Review the fields and select Save.')).toBeVisible()
       expect(probes).toEqual([null, null, 'owned-server-key'])
+      await expect.poll(() => page.evaluate(() => window.received.length)).toBe(2)
       const {connection,...fields} = (await page.evaluate(()=>window.received))[1].values
       expect(fields).toEqual({server:pms,player:'http://192.168.1.22:43519',token:'owned-server-key',player_token:'owned-player-key',refresh:'30 s'})
       expect(JSON.parse(connection)).toMatchObject({s:'server1',p:'player1'})

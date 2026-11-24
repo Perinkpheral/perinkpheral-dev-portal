@@ -135,10 +135,11 @@ can be supplied explicitly for the selected HTTPS server, separately from the
 Plex token and any player token.
 
 The flow rejects values that exceed 255 bytes. A missing direct player key
-replaces the saved key with the app's disabled value, since the firmware retains
-blank secrets on Save. Proxy Authorization can be removed explicitly through
-the setup form. Address changes can clear unchanged credentials, so re-enter
-the proxy value if it is still needed.
+replaces the saved key with the app's no-credential value, since the firmware
+retains blank secrets on Save. The device can verify a selected LAN player
+that permits direct access without a key. To remove Proxy Authorization, clear
+it through the setup form. Address changes can clear unchanged credentials, so
+re-enter the proxy value if it is still needed.
 
 Run `node --test tests/now-playing.test.mjs` and
 `npm run test:browser -- tests/browser/now-playing.spec.mjs` for the offline

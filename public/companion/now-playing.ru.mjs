@@ -35,6 +35,7 @@ export default {
   'Player machine identifier': 'Идентификатор плеера',
   'Direct player address': 'Адрес плеера для прямого подключения',
   'Direct player access key': 'Ключ для прямого подключения к плееру',
+  'Supply a key only if this player requires one. The device verifies the player before offering controls.': 'Введите ключ, если плеер его требует. Устройство проверит плеер, прежде чем показать кнопки управления.',
   'Player access key': 'Ключ доступа к плееру',
   'Player address': 'Адрес плеера',
   'Player identifier': 'Идентификатор плеера',
