@@ -141,6 +141,15 @@ and keys. Setup rejects a combined value that does not fit. Re-enter the proxy
 credential after changing any address if it is still needed. Refresh choices
 are 15 seconds, 30 seconds and 1 minute.
 
+For Jellyfin, enter the server address including its optional base path. Quick
+Connect shows a code to approve in an already authenticated Jellyfin client.
+Manual setup verifies a user access token on that same server. Jellyfin uses
+its own credentials and session discovery, while the setup clears any Plex
+player addresses and proxy credentials. A reverse proxy needs to permit the
+native Jellyfin Authorization header. Browser CORS, mixed-content restrictions
+and local-network permissions can affect both Quick Connect and token setup.
+[Jellyfin Quick Connect instructions](https://jellyfin.org/docs/general/server/quick-connect/)
+
 Run `node --test tests/now-playing.test.mjs` and
 `npm run test:browser -- tests/browser/now-playing.spec.mjs` for the offline
 companion checks. These test the bridge and mocked authentication. A real

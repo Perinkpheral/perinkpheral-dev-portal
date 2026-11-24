@@ -18,7 +18,7 @@
       <a href="../" target="_blank" rel="noopener noreferrer">perINKpheral</a>
       <label class="language" for="language">Language<select id="language"><option value="en">English</option><option value="ru">Русский</option></select></label>
       <h1>Now Playing setup</h1>
-      <p>Works with Plex*</p>
+      <p>Connect to Plex* or Jellyfin</p>
     </header>
     <section aria-labelledby="device-heading">
       <h2 id="device-heading">Connect to your device</h2>
@@ -29,61 +29,91 @@
       <p id="peer" role="status" aria-live="polite">Open this setup from the app’s settings on your device.</p>
     </section>
     <fieldset id="setup" disabled>
-      <legend>Plex server</legend>
-      <div class="choices">
-        <button type="button" id="manual">Enter server manually</button>
-        <button type="button" id="signin">Sign in with Plex</button>
-      </div>
-      <div id="cloud" hidden>
-        <p>Sign in with your own Plex account. Choose one of your servers and use its LAN address or your own HTTPS address.</p>
-        <p><a id="approve" target="_blank" rel="noopener noreferrer" hidden>Open Plex sign-in ↗</a></p>
-        <button id="cancel" type="button" hidden>Cancel sign-in</button>
-        <label id="server-choice-label" for="server-choice" hidden>Personal server</label>
-        <select id="server-choice" hidden></select>
-        <div id="custom-cloud" hidden>
-          <label for="cloud-server">Server address <span>optional</span></label>
-          <input id="cloud-server" type="url" autocomplete="off" placeholder="Use the server’s LAN address">
-          <p>If you already use a custom HTTPS address, leave it here. Clear it to use the chosen server’s LAN address.</p>
-          <label id="cloud-confirm-label" for="cloud-confirm" hidden><input id="cloud-confirm" type="checkbox"><span id="cloud-confirm-text"></span></label>
+      <legend>Media server</legend>
+      <label for="provider">Service</label>
+      <select id="provider">
+        <option value="">Choose a service</option>
+        <option value="plex">Plex</option>
+        <option value="jellyfin">Jellyfin</option>
+      </select>
+      <div id="plex-settings" hidden>
+        <div class="choices">
+          <button type="button" id="manual">Enter server manually</button>
+          <button type="button" id="signin">Sign in with Plex</button>
+        </div>
+        <div id="cloud" hidden>
+          <p>Sign in with your own Plex account. Choose one of your servers and use its LAN address or your own HTTPS address.</p>
+          <p><a id="approve" target="_blank" rel="noopener noreferrer" hidden>Open Plex sign-in ↗</a></p>
+          <button id="cancel" type="button" hidden>Cancel sign-in</button>
+          <label id="server-choice-label" for="server-choice" hidden>Personal server</label>
+          <select id="server-choice" hidden></select>
+          <div id="custom-cloud" hidden>
+            <label for="cloud-server">Server address <span>optional</span></label>
+            <input id="cloud-server" type="url" autocomplete="off" placeholder="Use the server’s LAN address">
+            <p>If you already use a custom HTTPS address, leave it here. Clear it to use the chosen server’s LAN address.</p>
+            <label id="cloud-confirm-label" for="cloud-confirm" hidden><input id="cloud-confirm" type="checkbox"><span id="cloud-confirm-text"></span></label>
+          </div>
+        </div>
+        <div id="manual-settings" hidden>
+          <label for="server">Server address</label>
+          <input id="server" type="url" autocomplete="off" placeholder="https://plex.example.org">
+          <label for="server-id">Server machine identifier <span>optional</span></label>
+          <input id="server-id" autocomplete="off" spellcheck="false" maxlength="255">
+          <label for="token">Server access key</label>
+          <input id="token" type="password" autocomplete="off" spellcheck="false">
+          <p>The app connects directly to this server. Use a Plex access key accepted at that address. A proxy that requires its own browser sign-in or cookie needs a different endpoint.</p>
+        </div>
+        <div id="target-settings" hidden>
+          <details id="proxy-settings" hidden>
+            <summary>Reverse proxy access</summary>
+            <label for="server-auth">Server Authorization header <span>optional</span></label>
+            <input id="server-auth" type="password" autocomplete="off" spellcheck="false">
+            <label for="clear-auth"><input id="clear-auth" type="checkbox">Remove saved proxy Authorization</label>
+            <p>Use a scoped credential issued by your proxy operator for this HTTPS server. Browser sign-in cookies cannot be transferred. If you change any address, re-enter the proxy credential if you still need it.</p>
+          </details>
+          <p>Choose the players to offer on the device. Saving replaces the previous player list.</p>
+          <button id="probe" type="button">Find players</button>
+          <div id="player-slots"></div>
+          <template id="player-slot">
+            <details class="player-slot">
+              <summary></summary>
+              <label for="receiver">Choose a discovered player</label>
+              <select id="receiver"><option value="">Enter details or leave empty</option></select>
+              <label for="player-id">Player machine identifier</label>
+              <input id="player-id" autocomplete="off" maxlength="127">
+              <label for="player">Direct player address <span>optional</span></label>
+              <input id="player" type="url" autocomplete="off">
+              <label for="player-token">Direct player access key <span>optional</span></label>
+              <input id="player-token" type="password" autocomplete="off">
+              <p>Supply a key only if this player requires one. The device verifies the player before offering controls.</p>
+            </details>
+          </template>
+          <label for="refresh">Refresh</label>
+          <select id="refresh"><option value="15 s">15 s</option><option value="30 s">30 s</option><option value="1 min">1 min</option></select>
+          <button id="fill" type="button">Fill device settings</button>
+          <p>Review the filled fields in the device tab, then select <strong>Save</strong>.</p>
         </div>
       </div>
-      <div id="manual-settings" hidden>
-        <label for="server">Server address</label>
-        <input id="server" type="url" autocomplete="off" placeholder="https://plex.example.org">
-        <label for="server-id">Server machine identifier <span>optional</span></label>
-        <input id="server-id" autocomplete="off" spellcheck="false" maxlength="255">
-        <label for="token">Server access key</label>
-        <input id="token" type="password" autocomplete="off" spellcheck="false">
-        <p>The app connects directly to this server. Use a Plex access key accepted at that address. A proxy that requires its own browser sign-in or cookie needs a different endpoint.</p>
-      </div>
-      <div id="target-settings" hidden>
-        <details id="proxy-settings" hidden>
-          <summary>Reverse proxy access</summary>
-          <label for="server-auth">Server Authorization header <span>optional</span></label>
-          <input id="server-auth" type="password" autocomplete="off" spellcheck="false">
-          <label for="clear-auth"><input id="clear-auth" type="checkbox">Remove saved proxy Authorization</label>
-          <p>Use a scoped credential issued by your proxy operator for this HTTPS server. Browser sign-in cookies cannot be transferred. If you change any address, re-enter the proxy credential if you still need it.</p>
+      <div id="jellyfin-settings" hidden>
+        <label for="jellyfin-server">Jellyfin server address</label>
+        <input id="jellyfin-server" type="url" autocomplete="off" spellcheck="false" placeholder="https://media.example.org/jellyfin">
+        <p>Include your server’s base path, such as /jellyfin, if it uses one.</p>
+        <button id="jellyfin-start" type="button">Start Quick Connect</button>
+        <div id="jellyfin-approval" hidden>
+          <p>Open Quick Connect in a Jellyfin app where you are already signed in. Enter this code there.</p>
+          <p><output id="jellyfin-code" aria-live="polite"></output></p>
+          <button id="jellyfin-cancel" type="button">Cancel sign-in</button>
+        </div>
+        <details>
+          <summary>Enter a Jellyfin user access token</summary>
+          <label for="jellyfin-token">Jellyfin user access token</label>
+          <input id="jellyfin-token" type="password" autocomplete="off" spellcheck="false">
+          <p>Use a token from a Jellyfin user account. Server API keys cannot be used here.</p>
+          <button id="jellyfin-verify" type="button">Verify token</button>
         </details>
-        <p>Choose the players to offer on the device. Saving replaces the previous player list.</p>
-        <button id="probe" type="button">Find players</button>
-        <div id="player-slots"></div>
-        <template id="player-slot">
-          <details class="player-slot">
-            <summary></summary>
-            <label for="receiver">Choose a discovered player</label>
-            <select id="receiver"><option value="">Enter details or leave empty</option></select>
-            <label for="player-id">Player machine identifier</label>
-            <input id="player-id" autocomplete="off" maxlength="127">
-            <label for="player">Direct player address <span>optional</span></label>
-            <input id="player" type="url" autocomplete="off">
-            <label for="player-token">Direct player access key <span>optional</span></label>
-            <input id="player-token" type="password" autocomplete="off">
-            <p>Supply a key only if this player requires one. The device verifies the player before offering controls.</p>
-          </details>
-        </template>
-        <label for="refresh">Refresh</label>
-        <select id="refresh"><option value="15 s">15 s</option><option value="30 s">30 s</option><option value="1 min">1 min</option></select>
-        <button id="fill" type="button">Fill device settings</button>
+        <label for="jellyfin-refresh">Refresh</label>
+        <select id="jellyfin-refresh"><option value="15 s">15 s</option><option value="30 s">30 s</option><option value="1 min">1 min</option></select>
+        <button id="jellyfin-fill" type="button" disabled>Fill device settings</button>
         <p>Review the filled fields in the device tab, then select <strong>Save</strong>.</p>
       </div>
       <p id="activity" role="status" aria-live="polite"></p>
@@ -93,6 +123,7 @@
       <p>Hosted setup sends sign-in requests to Plex. The sign-in key and account token are held only in this tab’s memory. No access key is sent to the perINKpheral web server. Manual setup works independently of Plex sign-in.</p>
       <p>The browser verifies the chosen server during Plex setup and contacts it if you ask to find players. The server receives its access key and any proxy Authorization header you provide. When you fill the settings, your approved device tab receives the selected server and optional player credentials. Save on that device to store them. The app keeps the last confirmed playback metadata on the device for display when the server cannot be reached. Remove the app and choose to forget its data to clear both credentials and metadata. Revoke access separately in Plex if needed.</p>
       <p>The device uses the configured server and, if supplied, the direct player addresses. It does not need a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
+      <p>Jellyfin setup talks directly to the Jellyfin server you enter. Quick Connect uses a temporary secret while you approve the code in an existing Jellyfin client. The browser transfers a user token to the confirmed device tab when you fill the settings. A proxy that requires a browser session or its own Authorization header needs a Jellyfin endpoint that accepts native API authentication.</p>
       <p>* Used under license from Plex.</p>
     </details>
   </main>

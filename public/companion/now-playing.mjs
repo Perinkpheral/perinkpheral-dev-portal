@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 GrakovNe
 import russian from './now-playing.ru.mjs'
+import { beginQuickConnect, inspectJellyfin, jellyfinAddress, jellyfinSettings, pollQuickConnect, verifyJellyfinToken } from './jellyfin.mjs'
 
 export const appName = 'now-playing'
 const pinBase = 'https://clients.plex.tv/api/v2/pins'
@@ -288,6 +289,7 @@ function init() {
   let peer = null, handshake = null, mode = '', matches = [], signIn = null, probe = null, peers = [], cloudPlayers = [], supportsProxy = false
   const opener = window.top === window ? window.opener : null
   const controller = crypto.randomUUID()
+  let jellyfinAttempt = null, jellyfinAccount = null, jellyfinDevice = null
   const text = id => byId(id).value
   const choose = (id, selected) => { byId(id).value = selected }
   const fail = error => { if (error?.name !== 'AbortError') activity(error instanceof TypeError ? 'The browser could not reach the address. Check TLS and allow local-network access if prompted.' : (error?.message || 'Setup could not continue.')) }
@@ -306,7 +308,18 @@ function init() {
       byId('setup').disabled = false
       show('proxy-settings', supportsProxy)
       choose('server', handshake.values?.server || '')
-      if (refreshValues.includes(handshake.values?.refresh)) choose('refresh', handshake.values.refresh)
+      choose('jellyfin-server', handshake.values?.server || '')
+      if (refreshValues.includes(handshake.values?.refresh)) {
+        choose('refresh', handshake.values.refresh)
+        choose('jellyfin-refresh', handshake.values.refresh)
+      }
+      jellyfinDevice = crypto.randomUUID()
+      try {
+        const key = 'now-playing-jellyfin-device:' + peer
+        const prior = localStorage.getItem(key)
+        if (prior && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(prior)) jellyfinDevice = prior
+        else localStorage.setItem(key, jellyfinDevice)
+      } catch { /* Continue with the tab's device ID. */ }
       report('peer','Device confirmed at {address}.',{address:expected})
     } catch (error) {
       report('peer',error.message)
@@ -551,6 +564,115 @@ function init() {
       activity(peers.length ? 'Choose the players you want to use.' : 'No players are visible now. You can enter a player or leave the slots empty.')
     } catch (error) { fail(error) }
   })
+  function sendSettings(values) {
+    if (!peer || !opener || opener.closed) throw Error('Open setup again from your device.')
+    opener.postMessage({ perinkpheral:'settings', values }, peer)
+    choose('token','')
+    slots.forEach(slot => choose(slotId('player-token',slot),''))
+    clearProxyInput()
+    matches = []
+    cloudPlayers = []
+    peers = []
+    resetJellyfin()
+    byId('setup').disabled = true
+    activity('Return to your device tab. Review the fields and select Save.')
+  }
+
+  function resetJellyfin() {
+    jellyfinAttempt?.abort()
+    jellyfinAttempt = null
+    jellyfinAccount = null
+    choose('jellyfin-token','')
+    byId('jellyfin-fill').disabled = true
+    byId('jellyfin-verify').disabled = false
+    byId('jellyfin-start').disabled = false
+    byId('jellyfin-code').value = ''
+    show('jellyfin-approval',false)
+  }
+
+  byId('provider').addEventListener('change', () => {
+    switchMode('')
+    choose('token','')
+    resetJellyfin()
+    show('plex-settings',text('provider')==='plex')
+    show('jellyfin-settings',text('provider')==='jellyfin')
+  })
+  byId('jellyfin-server').addEventListener('input', () => {
+    resetJellyfin()
+    activity('')
+  })
+  byId('jellyfin-cancel').addEventListener('click', () => {
+    resetJellyfin()
+    activity('Sign-in cancelled.')
+  })
+  byId('jellyfin-token').addEventListener('input', () => {
+    if (jellyfinAttempt && byId('jellyfin-verify').disabled) {
+      const updated = text('jellyfin-token')
+      resetJellyfin()
+      choose('jellyfin-token',updated)
+    }
+    jellyfinAccount = null
+    byId('jellyfin-fill').disabled = true
+  })
+
+  async function jellyfinSignIn(manual) {
+    const token = manual ? text('jellyfin-token') : ''
+    resetJellyfin()
+    if (manual) choose('jellyfin-token',token)
+    const attempt = jellyfinAttempt = new AbortController()
+    const {signal} = attempt
+    byId('jellyfin-start').disabled = true
+    byId('jellyfin-verify').disabled = true
+    try {
+      if (!peer || !jellyfinDevice) throw Error('Open setup again from your device.')
+      const entered = jellyfinAddress(text('jellyfin-server'),serverAddress)
+      activity('Connecting to the selected server…')
+      const server = await inspectJellyfin(entered,signal)
+      let auth
+      if (manual) auth = await verifyJellyfinToken(server,jellyfinDevice,token,signal)
+      else {
+        const pending = await beginQuickConnect(server,jellyfinDevice,signal)
+        if (jellyfinAttempt !== attempt) return
+        byId('jellyfin-code').value = pending.code
+        show('jellyfin-approval')
+        activity('Waiting for Quick Connect approval…')
+        const deadline = Date.now() + 5 * 60 * 1000
+        while (Date.now() < deadline && jellyfinAttempt === attempt && !auth) {
+          await new Promise(resolve => setTimeout(resolve,5000))
+          if (jellyfinAttempt !== attempt || Date.now() >= deadline) break
+          auth = await pollQuickConnect(server,jellyfinDevice,pending.secret,signal)
+        }
+        if (jellyfinAttempt !== attempt) return
+        if (!auth) throw Error('This sign-in request expired. Start again.')
+      }
+      if (jellyfinAttempt !== attempt) return
+      jellyfinSettings(server,jellyfinDevice,auth,text('jellyfin-refresh'))
+      jellyfinAccount = {server,auth}
+      choose('jellyfin-token','')
+      byId('jellyfin-fill').disabled = false
+      activity('Jellyfin account verified. Fill the device settings to continue.')
+    } catch (error) {
+      if (jellyfinAttempt === attempt) fail(error)
+    } finally {
+      if (jellyfinAttempt === attempt) {
+        jellyfinAttempt = null
+        byId('jellyfin-start').disabled = false
+        byId('jellyfin-verify').disabled = false
+        byId('jellyfin-code').value = ''
+        show('jellyfin-approval',false)
+      }
+    }
+  }
+  byId('jellyfin-start').addEventListener('click', () => jellyfinSignIn(false))
+  byId('jellyfin-verify').addEventListener('click', () => jellyfinSignIn(true))
+  byId('jellyfin-fill').addEventListener('click', () => {
+    try {
+      if (!jellyfinAccount) throw Error('Verify a Jellyfin account before filling device settings.')
+      const {server,auth} = jellyfinAccount
+      sendSettings(jellyfinSettings(server,jellyfinDevice,auth,text('jellyfin-refresh')))
+    } catch (error) { fail(error) }
+  })
+
   byId('fill').addEventListener('click', async () => {
     try {
       if (!peer || !opener || opener.closed) throw Error('Open setup again from your device.')
@@ -576,16 +698,7 @@ function init() {
           byId('fill').disabled = false
         }
       }
-      if (opener.closed) throw Error('Open setup again from your device.')
-      opener.postMessage({ perinkpheral:'settings', values }, peer)
-      choose('token','')
-      slots.forEach(slot => choose(slotId('player-token',slot),''))
-      clearProxyInput()
-      matches = []
-      cloudPlayers = []
-      peers = []
-      byId('setup').disabled = true
-      activity('Return to your device tab. Review the fields and select Save.')
+      sendSettings(values)
     } catch (error) { fail(error) }
   })
 }
