@@ -78,6 +78,7 @@ const MANIFEST = `
   "author": "Your name",
   "version": "0.2.5",
   "abi": 3,
+  "format": "json",
   "settings": [
     { "key": "city", "type": "place", "title": "City",
       "latitude": "lat", "longitude": "lon" },
@@ -109,6 +110,22 @@ void app_on_picked(int32_t poll, int32_t http_status)
         app_state_save("state", &state, sizeof state);
         screen_redraw(HOST_REDRAW_NORMAL);
     }
+}
+`
+
+const POLL_FORMATS = `
+{
+  "format": "auto",
+  "polls": [
+    { "url": "https://media.example.test/auto", "every": 60 },
+    { "url": "https://media.example.test/search", "every": 60,
+      "method": "POST", "format": "xml",
+      "headers": { "Content-Type": "application/xml" },
+      "body": "<Query limit=\\"1\\"/>" },
+    { "url": "https://media.example.test/sessions", "every": 60,
+      "format": "json", "pick": ["[0].NowPlayingItem.Name"] },
+    { "url": "https://media.example.test/untyped", "every": 60 }
+  ]
 }
 `
 
@@ -234,12 +251,19 @@ tools/perinkpheral log --follow
             rows={[
               [t('On a schedule', 'По расписанию'), t('Requests in the manifest', 'Запросы в манифесте')],
               [t('On demand', 'По запросу'), t('http_send() from the code', 'http_send() из кода')],
-              [t('Ready values', 'Готовые значения'), t('List JSON paths in "pick": app_on_picked() gets the values', 'Пути JSON в "pick": app_on_picked() получает значения')],
-              [t('Raw response', 'Ответ как есть'), t('Without "pick": app_on_data() gets the response piece by piece', 'Без "pick": app_on_data() получает ответ частями')],
+              [t('Ready values', 'Готовые значения'), t('For JSON responses, pick delivers extracted values to app_on_picked()', 'Для ответа JSON поле pick передаёт извлечённые значения в app_on_picked()')],
+              [t('Raw response', 'Ответ как есть'), t('app_on_data() gets the bytes piece by piece', 'app_on_data() получает байты ответа частями')],
               [t('Show on screen', 'Показать на экране'), t('screen_request() requests foreground display from a background handler. Refused within 30 seconds of a button press or a previous grant, or while a confirmation question is open. Refused requests are not retried.', 'screen_request() запрашивает вывод приложения из фонового обработчика. Запрос отклоняется в течение 30 секунд после нажатия кнопки или предыдущего разрешения, а также при открытом вопросе подтверждения. Отклонённые запросы не повторяются.')],
             ]}
           />
           <Code label="weather.c">{VALUES}</Code>
+          <h3>{t('Response formats', 'Форматы ответов')}</h3>
+          <p>{t('From firmware 0.1.100, set format to json, xml, raw or auto in an ABI 3 manifest. A poll can override the application default. Requests from code use the application default.', 'Начиная с прошивки 0.1.100 в манифесте ABI 3 можно указать format со значением json, xml, raw или auto. Формат опроса имеет приоритет над форматом приложения. Запросы из кода используют формат приложения.')}</p>
+          <p>{t('Explicit json or xml overrides the response Content-Type. The default auto uses its MIME type, including +json and +xml subtypes. Unknown or missing MIME types reach app_on_data() unchanged, as do responses explicitly marked raw.', 'Явные json и xml переопределяют Content-Type ответа. По умолчанию auto использует MIME-тип, включая подтипы +json и +xml. При неизвестном или отсутствующем MIME-типе байты передаются в app_on_data() без изменений, как и при явном raw.')}</p>
+          <p>{t('Register a 1–12,288 byte buffer with document_buffer_set() in app_on_load() to receive a complete JSON or XML body in app_on_document(). If the app also implements app_on_data(), its chunks arrive first. JSON polls with pick use app_on_picked() exclusively. Set format to json to keep picking from a server that mislabels its JSON.', 'Зарегистрируйте буфер от 1 до 12 288 байт через document_buffer_set() в app_on_load(), чтобы получать целый ответ JSON или XML в app_on_document(). Если в приложении есть app_on_data(), фрагменты сначала поступают в него. Опросы JSON с pick вызывают только app_on_picked(). Чтобы извлекать значения, когда сервер неверно маркирует JSON, задайте format со значением json.')}</p>
+          <Code label="manifest.json">{POLL_FORMATS}</Code>
+          <p>{t('The example combines Plex-style XML and Jellyfin-style JSON. It shows an automatically detected GET, a read-only XML query sent by POST with a response override, and an unknown MIME type delivered as bytes.', 'Пример сочетает XML в стиле Plex и JSON в стиле Jellyfin. В нём есть GET с автоматическим определением, запрос на чтение XML через POST с переопределением формата ответа и потоковая доставка неизвестного MIME-типа.')}{' '}<a href={files.pollFormats}>{t('Runnable example and tests', 'Рабочий пример и тесты')}</a></p>
+
         </Chapter>
 
         <Chapter chapter={kit}>

@@ -29,6 +29,7 @@ export const files = {
   hostApi: blob('sdk/host_api.h'),
   sdkLib: `${repo.firmware}/tree/main/sdk/lib`,
   hello: `${repo.firmware}/tree/main/sdk/apps/hello`,
+  pollFormats: `${repo.firmware}/tree/main/docs/examples/poll-formats`,
   cmake: `${repo.firmware}/tree/main/sdk/cmake`,
   companion: blob('sdk/companion/example.html'),
   guidePdf: 'https://github.com/Perinkpheral/perinkpheral-os/releases/latest/download/perinkpheral-app-guide.pdf',
