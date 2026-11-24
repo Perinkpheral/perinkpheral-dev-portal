@@ -4,16 +4,15 @@ import test from 'node:test'
 import { address, listPlayers, personalServers, pollPlex, settings, setupMessage, startPlex } from '../public/companion/now-playing.mjs'
 
 const controller = 'c047d13a-fcb5-4832-bb85-857b87c299dc'
-const manual = { server:'https://media.example.org', player:'', token:'own-access-key',
-  player_token:'', serverId:'', receiverId:'', controller, refresh:'15 s' }
+const manual = { server:'https://media.example.org', token:'own-access-key', serverId:'', refresh:'15 s' }
 const local = { owned:true, provides:'server', clientIdentifier:'owner-server', name:'Library',
   accessToken:'resource-token', connections:[{ uri:'https://192-168-1-2.abb12.plex.direct:32400', local:true, relay:false }]}
 
 test('manual HTTPS configuration preserves exact server and works without cloud identity', () => {
-  assert.deepEqual(settings(manual), {server:manual.server, player:'', token:manual.token, player_token:'none', connection:JSON.stringify({c:controller,s:'',p:''}), refresh:'15 s'})
+  assert.deepEqual(settings(manual), {server:manual.server, player1:'', player2:'', player3:'', token:manual.token, connection:JSON.stringify({s:'',r:[]}), refresh:'15 s'})
   assert.throws(() => settings({...manual, token:'a'.repeat(256)}), /255-byte/)
   assert.throws(() => settings({...manual, token:'abc\r\ndef'}), /255-byte/)
-  assert.throws(() => settings({...manual, serverId:'a'.repeat(230)}), /255-byte/)
+  assert.throws(() => settings({...manual, serverId:'a'.repeat(255)}), /255-byte/)
   assert.throws(() => settings({...manual, server:'http://media.example.org'}), /HTTPS/)
   assert.throws(() => settings({...manual, server:'http://[2001:db8::1]'}), /HTTPS/)
   for (const origin of ['http://[fd34::1]', 'http://[fe80::1]', 'http://[::1]', 'http://169.254.1.2'])
@@ -23,13 +22,27 @@ test('manual HTTPS configuration preserves exact server and works without cloud 
   assert.throws(() => settings({...manual,server:'http://192.168.1.2',server_auth:'Bearer operator-key'}),/HTTPS/)
   assert.throws(() => settings({...manual, server:'https://name:key@media.example.org'}), /sign-in data/)
   assert.throws(() => address('https://media.example.org/?token=abc'), /sign-in data/)
-  assert.throws(() => settings({...manual, receiverId:'receiver'}), /server identifier/)
-  assert.throws(() => settings({...manual, player:'http://192.168.1.9'}), /player identifier/)
-  assert.deepEqual(JSON.parse(settings({...manual, serverId:'server', receiverId:'player'}).connection), {c:controller,s:'server',p:'player'})
+  assert.throws(() => settings({...manual, players:[{id:'receiver'}]}), /server identifier/)
+  assert.throws(() => settings({...manual, players:[{origin:'http://192.168.1.9'}]}), /player identifier/)
 })
 
-test('bridge accepts only the target app and six visible fields with the expected kinds', () => {
-  const fields = {server:'url', player:'url', token:'secret', player_token:'secret', connection:'secret', refresh:'choice'}
+test('each scoped key follows its receiver slot and the packed setting fails closed', () => {
+  const config={...manual, serverId:'server'}
+  const a={id:'receiver-a', origin:'http://192.168.1.9:32500', token:'a-key'}
+  const b={id:'receiver-b', origin:'http://192.168.1.10:32500'}
+  const result=settings({...config,players:[a,{},b]})
+  assert.deepEqual(JSON.parse(result.connection), {s:'server',r:[['receiver-a','a-key'],['',''],['receiver-b','']]})
+  assert.deepEqual([result.player1,result.player2,result.player3],[a.origin,'',b.origin])
+  assert.throws(() => settings({...config,players:[a,a]}), /different player/)
+  assert.throws(() => settings({...config,players:[{...a,origin:''}]}), /direct player address/)
+  assert.throws(() => settings({...config,players:[{...a,token:'x'.repeat(245)},b]}), /255-byte/)
+  assert.throws(() => settings({...config,players:[{...a,id:'x'.repeat(128)}]}), /127/)
+  assert.throws(() => settings({...config,players:[{...a,token:'token x'}]}), /spaces/)
+  assert.deepEqual(JSON.parse(settings({...config,players:[{id:'metadata-only'}]}).connection), {s:'server',r:[['metadata-only','']]})
+})
+
+test('bridge accepts only the target app and seven visible fields with the expected kinds', () => {
+  const fields = {server:'url', player1:'url', player2:'url', player3:'url', token:'secret', connection:'secret', refresh:'choice'}
   const message = { perinkpheral:'app', name:'now-playing', settings:Object.entries(fields).map(([key,type])=>({key,type})) }
   assert.ok(setupMessage(message))
   assert.ok(!setupMessage({...message,name:'other'}))

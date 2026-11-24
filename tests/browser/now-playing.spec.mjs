@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 const portal = 'http://127.0.0.1:4181'
 const device = 'http://localhost:4181'
 const pms = 'https://media.example.test'
-const schema = { server:'url', player:'url', token:'secret', player_token:'secret', connection:'secret', refresh:'choice', server_auth:'secret' }
+const schema = { server:'url', player1:'url', player2:'url', player3:'url', token:'secret', connection:'secret', refresh:'choice', server_auth:'secret' }
 
 async function companion(page, context, current = '', russian = false) {
   await context.route(`${device}/test-companion-device`, route => route.fulfill({
@@ -64,8 +64,8 @@ for (const locale of ['en-US','ru-RU']) {
       await expect.poll(() => page.evaluate(() => window.received.length)).toBe(2)
       const messages = await page.evaluate(()=>window.received)
       const {connection,...fields} = messages[1].values
-      expect(fields).toEqual({server:pms, player:'', token:'manual-scoped-key', player_token:'none', refresh:'30 s', server_auth:'Bearer proxy-key'})
-      expect(JSON.parse(connection)).toMatchObject({c:expect.stringMatching(/^[\da-f-]{36}$/),s:'',p:''})
+      expect(fields).toEqual({server:pms, player1:'', player2:'', player3:'', token:'manual-scoped-key', refresh:'30 s', server_auth:'Bearer proxy-key'})
+      expect(JSON.parse(connection)).toMatchObject({s:'',r:[]})
       if (russian) {
         await popup.locator('#language').selectOption('en')
         await expect(popup.getByRole('heading',{name:'Now Playing setup'})).toBeVisible()
@@ -73,7 +73,7 @@ for (const locale of ['en-US','ru-RU']) {
       }
     })
 
-    test('Plex sign-in preserves custom PMS, checks an unlisted origin without credentials, and pins a scoped local player', async ({page, context}) => {
+    test('Plex sign-in preserves custom PMS, checks an unlisted origin without credentials, and pins separately scoped local players', async ({page, context}) => {
       let identity = 'wrong-server'
       const probes = []
       const cors = { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'*', 'Access-Control-Allow-Methods':'GET, POST' }
@@ -92,7 +92,9 @@ for (const locale of ['en-US','ru-RU']) {
           { name:'Personal server', owned:true, provides:'server', clientIdentifier:'server1', accessToken:'owned-server-key',
             connections:[{uri:'http://192.168.1.11:32400',local:true}] },
           { name:'Plexamp', owned:true, provides:'player', clientIdentifier:'player1', accessToken:'owned-player-key',
-            connections:[{uri:'http://192.168.1.22:43519',local:true}] }
+            connections:[{uri:'http://192.168.1.22:43519',local:true}] },
+          { name:'Second player', owned:true, provides:'player', clientIdentifier:'player2', accessToken:'second-player-key',
+            connections:[{uri:'http://192.168.1.23:32500',local:true}] }
         ] })
       })
       await context.route(`${pms}/identity`, route => {
@@ -106,7 +108,9 @@ for (const locale of ['en-US','ru-RU']) {
       await expect(popup.locator('#server-choice')).toBeVisible({timeout:10000})
       await popup.locator('#server-choice').selectOption('0')
       await expect(popup.locator('#cloud-server')).toHaveValue(pms)
-      await popup.locator('#receiver').selectOption('0')
+      await popup.locator('#receiver-1').selectOption('0')
+      await popup.locator('#slot-3 summary').click()
+      await popup.locator('#receiver-3').selectOption('1')
       await popup.locator('#fill').click()
       await expect(popup.getByText(russian ? 'Подтвердите точный адрес, прежде чем использовать ключ доступа Plex.' : 'Confirm the exact address before using its Plex access key.')).toBeVisible()
       expect(probes).toEqual([])
@@ -121,8 +125,8 @@ for (const locale of ['en-US','ru-RU']) {
       expect(probes).toEqual([null, null, 'owned-server-key'])
       await expect.poll(() => page.evaluate(() => window.received.length)).toBe(2)
       const {connection,...fields} = (await page.evaluate(()=>window.received))[1].values
-      expect(fields).toEqual({server:pms,player:'http://192.168.1.22:43519',token:'owned-server-key',player_token:'owned-player-key',refresh:'30 s'})
-      expect(JSON.parse(connection)).toMatchObject({s:'server1',p:'player1'})
+      expect(fields).toEqual({server:pms,player1:'http://192.168.1.22:43519',player2:'',player3:'http://192.168.1.23:32500',token:'owned-server-key',refresh:'30 s',server_auth:'none'})
+      expect(JSON.parse(connection)).toMatchObject({s:'server1',r:[['player1','owned-player-key'],['',''],['player2','second-player-key']]})
     })
   })
 }

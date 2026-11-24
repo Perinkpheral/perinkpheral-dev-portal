@@ -127,19 +127,19 @@ Access keys stay in headers or device form values, outside navigable URLs.
 An existing custom address stays selected through sign-in. The companion asks
 before using a scoped server key at a custom origin. If Plex did not list that
 origin, it first compares the public identity without credentials. An identity
-match alone conveys no ownership. Cloud player selection may supply an owned
-player's local address for the device to verify after Save. Browser discovery
+match alone conveys no ownership. Choose up to three players from discovery or enter them manually. The device
+verifies each selected player's local address before offering direct controls. Browser discovery
 depends on server CORS, HTTPS and local-network access. Browser-only reverse
 proxy cookies cannot be handed off. An operator-issued Authorization value
 can be supplied explicitly for the selected HTTPS server, separately from the
 Plex token and any player token.
 
-The flow rejects values that exceed 255 bytes. A missing direct player key
-replaces the saved key with the app's no-credential value, since the firmware
-retains blank secrets on Save. The device can verify a selected LAN player
-that permits direct access without a key. To remove Proxy Authorization, clear
-it through the setup form. Address changes can clear unchanged credentials, so
-re-enter the proxy value if it is still needed.
+Saving replaces the previous player list. Each player key belongs to its own
+receiver. A LAN player can permit direct access without a key. Device settings
+are limited to 255 bytes per field, including the combined receiver identifiers
+and keys. Setup rejects a combined value that does not fit. Re-enter the proxy
+credential after changing any address if it is still needed. Refresh choices
+are 15 seconds, 30 seconds and 1 minute.
 
 Run `node --test tests/now-playing.test.mjs` and
 `npm run test:browser -- tests/browser/now-playing.spec.mjs` for the offline

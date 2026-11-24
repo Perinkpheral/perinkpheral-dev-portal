@@ -6,7 +6,8 @@ export const appName = 'now-playing'
 const pinBase = 'https://clients.plex.tv/api/v2/pins'
 const resourceUrl = 'https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=0'
 const product = 'perINKpheral Now Playing'
-const fields = { server:'url', player:'url', token:'secret', player_token:'secret', connection:'secret', refresh:'choice' }
+const slots = [1, 2, 3]
+const fields = { server:'url', player1:'url', player2:'url', player3:'url', token:'secret', connection:'secret', refresh:'choice' }
 const refreshValues = ['15 s', '30 s', '1 min']
 
 export function address(value, device = false) {
@@ -58,24 +59,32 @@ function proxyHeader(origin, authorization) {
   return { Authorization:header }
 }
 
-export function settings({ server, player, token, player_token, server_auth, serverId, receiverId, controller, refresh }) {
+export function settings({ server, token, server_auth, serverId = '', players = [], refresh }) {
   if (!refreshValues.includes(refresh)) throw Error('Choose a refresh interval.')
-  for (const [id, label] of [[controller,'Controller identifier'], [serverId,'Server identifier'], [receiverId,'Player identifier']]) {
-    if (/[^\x21-\x7e]/.test(id)) throw Error(`${label} must use printable ASCII without spaces.`)
-  }
-  const connection = JSON.stringify({ c:controller, s:serverId, p:receiverId })
   if (!token) throw Error('Enter a Plex server access key.')
-  if (receiverId && !serverId) throw Error('Enter or discover the server identifier before selecting a player.')
-  if ((player || player_token) && !receiverId) throw Error('Enter a player identifier before configuring a direct address.')
-  if (player_token && !player) throw Error('Enter the direct player address for its access key.')
+  if (/[^\x21-\x7e]/.test(serverId)) throw Error('Server identifier must use printable ASCII without spaces.')
+  if (players.length > slots.length) throw Error('The device has three player slots.')
+  const ids = new Set()
+  const origins = {}
+  const receivers = slots.map((slot, index) => {
+    const { id = '', origin = '', token: key = '' } = players[index] || {}
+    if (id.length > 127 || /[^\x21-\x7e]/.test(id)) throw Error('Player identifier must fit 127 printable ASCII bytes without spaces.')
+    if (/[^\x21-\x7e]/.test(key)) throw Error('Player access key must use printable ASCII without spaces.')
+    if ((origin || key) && !id) throw Error('Enter a player identifier before configuring a direct address.')
+    if (id && !serverId) throw Error('Enter or discover the server identifier before selecting a player.')
+    if (key && !origin) throw Error('Enter the direct player address for its access key.')
+    if (id && ids.has(id)) throw Error('Choose a different player for each slot.')
+    ids.add(id)
+    origins[`player${slot}`] = value(origin ? serverAddress(origin) : '', 'Player address')
+    return [id, key]
+  })
+  while (receivers.length && !receivers.at(-1)[0]) receivers.pop()
+  const connection = JSON.stringify({s:serverId, r:receivers})
   const origin = value(serverAddress(server), 'Server address')
   const proxy = proxyHeader(origin, server_auth)
   return {
-    server:origin,
-    player:value(player ? serverAddress(player) : '', 'Player address'),
-    token:value(token, 'Server access key'),
-    player_token:value(player_token || 'none', 'Player access key'),
-    connection:value(connection, 'Server and player identifiers'),
+    server:origin, ...origins, token:value(token, 'Server access key'),
+    connection:value(connection, 'Server and player identifiers and access keys'),
     refresh,
     ...(server_auth === 'none' ? { server_auth:'none' } : proxy.Authorization ? { server_auth:proxy.Authorization } : {})
   }
@@ -232,6 +241,16 @@ function localize(language, text, replacements = {}) {
 function init() {
   const byId = id => document.getElementById(id)
   const show = (id, visible = true) => { byId(id).hidden = !visible }
+  const slotId = (name, slot) => `${name}-${slot}`
+  for (const slot of slots) {
+    const copy = byId('player-slot').content.cloneNode(true)
+    copy.querySelectorAll('[id]').forEach(node => { node.id = slotId(node.id,slot) })
+    copy.querySelectorAll('label').forEach(node => { node.htmlFor = slotId(node.htmlFor,slot) })
+    const section = copy.querySelector('details')
+    section.id = slotId('slot',slot)
+    section.open = slot === 1
+    byId('player-slots').append(copy)
+  }
   let language = preferredLanguage()
   const t = (text,replacements) => localize(language,text,replacements)
   const staticText = []
@@ -252,7 +271,9 @@ function init() {
     byId('language').value = language
     byId('cloud-server').placeholder = t('Use the server’s LAN address')
     for (const [node,text] of staticText) node.data = text.replace(text.trim(),t(text.trim()))
-    for (const [id,text] of [['receiver','Select automatically'], ['server-choice','Choose a server']]) {
+    for (const slot of slots) byId(slotId('slot',slot)).querySelector('summary').textContent = t('Player {number}',{number:slot})
+    const placeholders = slots.map(slot => [slotId('receiver',slot),'Enter details or leave empty'])
+    for (const [id,text] of [...placeholders, ['server-choice','Choose a server']]) {
       const placeholder = byId(id).querySelector('option[value=""]')
       if (placeholder) placeholder.textContent = t(text)
     }
@@ -285,7 +306,6 @@ function init() {
       byId('setup').disabled = false
       show('proxy-settings', supportsProxy)
       choose('server', handshake.values?.server || '')
-      choose('player', handshake.values?.player || '')
       if (refreshValues.includes(handshake.values?.refresh)) choose('refresh', handshake.values.refresh)
       report('peer','Device confirmed at {address}.',{address:expected})
     } catch (error) {
@@ -313,13 +333,20 @@ function init() {
     probe?.abort()
     probe = null
     peers = []
-    resetOptions('receiver','Select automatically')
-    for (const id of ['player-id','player','player-token']) choose(id,'')
+    for (const slot of slots) {
+      resetOptions(slotId('receiver',slot),'Enter details or leave empty')
+      for (const field of ['player-id','player','player-token']) choose(slotId(field,slot),'')
+    }
   }
   function showPlayers(discovered = []) {
     peers = [...cloudPlayers, ...discovered.filter(player => !cloudPlayers.some(cloud => cloud.id === player.id))]
-    resetOptions('receiver','Select automatically')
-    peers.forEach((player,i) => byId('receiver').add(new Option(player.origin ? `${player.name} · ${player.origin}` : player.name, String(i))))
+    for (const slot of slots) {
+      const select = slotId('receiver',slot)
+      resetOptions(select,'Enter details or leave empty')
+      peers.forEach((player,i) => byId(select).add(new Option(player.origin ? `${player.name} · ${player.origin}` : player.name, String(i))))
+      const current = peers.findIndex(player => player.id === text(slotId('player-id',slot)))
+      if (current >= 0) choose(select,String(current))
+    }
   }
   function clearProxyInput() {
     choose('server-auth','')
@@ -334,20 +361,25 @@ function init() {
     if (!supportsProxy) return ''
     return byId('clear-auth').checked ? 'none' : text('server-auth')
   }
-  function saveProxyInput(server) {
+  function saveProxyInput(server, players) {
     const value = proxyInput()
     if (value || !supportsProxy) return value
     const previous = handshake.values?.server
     // The firmware keeps blank secrets, even when setting an empty address
     // for the first time. Never attach an old unbound proxy key to that address.
-    return previous && serverAddress(server) === previous ? '' : 'none'
-  }
-  for (const id of ['server-auth', 'clear-auth', 'cloud-confirm']) {
-    byId(id).addEventListener('input', () => {
-      probe?.abort()
-      probe = null
-      activity('')
+    const samePlayers = slots.every((slot,index) => {
+      const origin = players[index].origin
+      return (origin ? serverAddress(origin) : '') === (handshake.values?.[`player${slot}`] || '')
     })
+    return previous && serverAddress(server) === previous && samePlayers ? '' : 'none'
+  }
+  function cancelProbe() {
+    probe?.abort()
+    probe = null
+    activity('')
+  }
+  for (const id of ['server-auth', 'clear-auth', 'cloud-confirm', 'refresh']) {
+    byId(id).addEventListener('input', cancelProbe)
   }
 
   function switchMode(next) {
@@ -482,15 +514,28 @@ function init() {
     updateProxyInput()
   })
   byId('token').addEventListener('input', clearPlayers)
-  byId('player').addEventListener('input', () => choose('player-token',''))
-  byId('receiver').addEventListener('change', () => {
-    const player = text('receiver') === '' ? null : peers[Number(text('receiver'))]
-    choose('player-id','')
-    choose('player',player?.origin || '')
-    choose('player-token',typeof player?.token === 'string' ? player.token : '')
-  })
+  byId('server-id').addEventListener('input', cancelProbe)
+  for (const slot of slots) {
+    const receiver = slotId('receiver',slot)
+    const playerId = slotId('player-id',slot)
+    const origin = slotId('player',slot)
+    const key = slotId('player-token',slot)
+    byId(key).addEventListener('input', cancelProbe)
+    for (const field of [origin,playerId]) byId(field).addEventListener('input', () => {
+      cancelProbe()
+      choose(key,'')
+      choose(receiver,'')
+    })
+    byId(receiver).addEventListener('change', () => {
+      cancelProbe()
+      const player = text(receiver) === '' ? null : peers[Number(text(receiver))]
+      choose(playerId,player?.id || '')
+      choose(origin,player?.origin || '')
+      choose(key,typeof player?.token === 'string' ? player.token : '')
+    })
+  }
   byId('probe').addEventListener('click', async () => {
-    clearPlayers()
+    probe?.abort()
     try {
       const selected = selection()
       if (!selected?.token) throw Error('Choose a server and enter its access key first.')
@@ -503,7 +548,7 @@ function init() {
       if (selected.id && result.id !== selected.id) throw Error('The server answered with a different identity.')
       if (mode === 'manual') choose('server-id',result.id)
       showPlayers(result.devices)
-      activity(peers.length ? 'Choose a player or leave selection automatic.' : 'No players are visible now. You can leave selection automatic.')
+      activity(peers.length ? 'Choose the players you want to use.' : 'No players are visible now. You can enter a player or leave the slots empty.')
     } catch (error) { fail(error) }
   })
   byId('fill').addEventListener('click', async () => {
@@ -511,11 +556,12 @@ function init() {
       if (!peer || !opener || opener.closed) throw Error('Open setup again from your device.')
       const selected = selection()
       if (!selected) throw Error('Choose a Plex server.')
-      const receiver = text('receiver') === '' ? null : peers[Number(text('receiver'))]
+      const players = slots.map(slot => ({
+        id:text(slotId('player-id',slot)), origin:text(slotId('player',slot)), token:text(slotId('player-token',slot))
+      }))
       const values = settings({
-        server:selected.origin, token:selected.token, serverId:selected.id || '',
-        player:text('player'), player_token:text('player-token'), receiverId:text('player-id') || receiver?.id || '',
-        controller, refresh:text('refresh'), server_auth:saveProxyInput(selected.origin)
+        server:selected.origin, token:selected.token, serverId:selected.id || '', players,
+        refresh:text('refresh'), server_auth:saveProxyInput(selected.origin,players)
       })
       if (mode === 'cloud') {
         const check = new AbortController()
@@ -533,9 +579,11 @@ function init() {
       if (opener.closed) throw Error('Open setup again from your device.')
       opener.postMessage({ perinkpheral:'settings', values }, peer)
       choose('token','')
-      choose('player-token','')
+      slots.forEach(slot => choose(slotId('player-token',slot),''))
       clearProxyInput()
       matches = []
+      cloudPlayers = []
+      peers = []
       byId('setup').disabled = true
       activity('Return to your device tab. Review the fields and select Save.')
     } catch (error) { fail(error) }

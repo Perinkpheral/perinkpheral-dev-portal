@@ -62,21 +62,25 @@
           <label for="server-auth">Server Authorization header <span>optional</span></label>
           <input id="server-auth" type="password" autocomplete="off" spellcheck="false">
           <label for="clear-auth"><input id="clear-auth" type="checkbox">Remove saved proxy Authorization</label>
-          <p>Use a scoped credential issued by your proxy operator for this HTTPS server. Browser sign-in cookies cannot be transferred. If you change either address, re-enter the proxy credential if you still need it.</p>
+          <p>Use a scoped credential issued by your proxy operator for this HTTPS server. Browser sign-in cookies cannot be transferred. If you change any address, re-enter the proxy credential if you still need it.</p>
         </details>
-        <label for="receiver">Player <span>optional</span></label>
-        <select id="receiver"><option value="">Select automatically</option></select>
+        <p>Choose the players to offer on the device. Saving replaces the previous player list.</p>
         <button id="probe" type="button">Find players</button>
-        <details>
-          <summary>Enter player details</summary>
-          <label for="player-id">Player machine identifier</label>
-          <input id="player-id" autocomplete="off" maxlength="255">
-          <label for="player">Direct player address <span>optional</span></label>
-          <input id="player" type="url" autocomplete="off">
-          <label for="player-token">Direct player access key <span>optional</span></label>
-          <input id="player-token" type="password" autocomplete="off">
-          <p>Supply a key only if this player requires one. The device verifies the player before offering controls.</p>
-        </details>
+        <div id="player-slots"></div>
+        <template id="player-slot">
+          <details class="player-slot">
+            <summary></summary>
+            <label for="receiver">Choose a discovered player</label>
+            <select id="receiver"><option value="">Enter details or leave empty</option></select>
+            <label for="player-id">Player machine identifier</label>
+            <input id="player-id" autocomplete="off" maxlength="127">
+            <label for="player">Direct player address <span>optional</span></label>
+            <input id="player" type="url" autocomplete="off">
+            <label for="player-token">Direct player access key <span>optional</span></label>
+            <input id="player-token" type="password" autocomplete="off">
+            <p>Supply a key only if this player requires one. The device verifies the player before offering controls.</p>
+          </details>
+        </template>
         <label for="refresh">Refresh</label>
         <select id="refresh"><option value="15 s">15 s</option><option value="30 s">30 s</option><option value="1 min">1 min</option></select>
         <button id="fill" type="button">Fill device settings</button>
@@ -88,7 +92,7 @@
       <summary>Privacy and compatibility</summary>
       <p>Hosted setup sends sign-in requests to Plex. The sign-in key and account token are held only in this tab’s memory. No access key is sent to the perINKpheral web server. Manual setup works independently of Plex sign-in.</p>
       <p>The browser verifies the chosen server during Plex setup and contacts it if you ask to find players. The server receives its access key and any proxy Authorization header you provide. When you fill the settings, your approved device tab receives the selected server and optional player credentials. Save on that device to store them. The app keeps the last confirmed playback metadata on the device for display when the server cannot be reached. Remove the app and choose to forget its data to clear both credentials and metadata. Revoke access separately in Plex if needed.</p>
-      <p>The device uses the configured server and, if supplied, the direct player address. It does not need a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
+      <p>The device uses the configured server and, if supplied, the direct player addresses. It does not need a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
       <p>* Used under license from Plex.</p>
     </details>
   </main>
