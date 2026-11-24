@@ -32,10 +32,11 @@ screen_on() {
     done
 }
 
-# Panel corners scaled from the 6000 x 4000 originals to 1600 x 1067.
-FRONT="423.2:244.1:1181.3:244.1:423.2:808.3:1181.3:808.3"
-FRONT_LEFT="654.4:352.6:1208.5:252.1:734.4:873.3:1270.1:732.2"
-FRONT_RIGHT="397.3:252.3:943.5:344.6:331.5:731.4:870.9:871.2"
+# Panel corners remeasured on the 1600 x 1067 production case renders.
+# Expanded by the mask's two source pixels so its inset meets the panel edges.
+FRONT="422.0:242.6:1177.0:242.6:417.7:808.4:1181.3:808.4"
+FRONT_LEFT="652.9:352.3:1201.8:250.6:733.0:874.4:1269.6:732.1"
+FRONT_RIGHT="397.2:250.6:946.5:352.4:329.4:732.2:866.1:874.5"
 screen_on front weather "$FRONT" front
 screen_on front34l iss "$FRONT_LEFT" front34l
 screen_on front34r stocks "$FRONT_RIGHT" front34r
