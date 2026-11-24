@@ -108,6 +108,45 @@ ffmpeg -loglevel error -y -i public/renders/hero-weather-1600.webp \
     -q:v 3 -frames:v 1 -update 1 public/og.jpg
 ```
 
+## Now Playing companion
+
+The device opens `public/companion/now-playing.html` at
+`https://perinkpheral.dev/companion/now-playing.html`. The page is static and uses
+the firmware's two-window settings bridge. The user confirms the device tab's
+exact origin, fills its form, and presses Save on the device. The companion
+never sends credentials in a wildcard message. It follows the portal or browser
+language, with an English/Russian switch on the same URL.
+
+Manual setup accepts an explicit HTTP LAN or HTTPS server origin and its Plex
+access key independently of discovery. Plex sign-in uses Plex's hosted Ed25519
+PIN/JWK flow. The browser keeps its ephemeral signing key and account JWT in
+memory and passes only scoped server and player resource keys to the approved
+device. The official PIN exchange takes a short-lived signed device proof.
+Access keys stay in headers or device form values, outside navigable URLs.
+
+An existing custom address stays selected through sign-in. The companion asks
+before using a scoped server key at a custom origin. If Plex did not list that
+origin, it first compares the public identity without credentials. An identity
+match alone conveys no ownership. Cloud player selection may supply an owned
+player's local address for the device to verify after Save. Browser discovery
+depends on server CORS, HTTPS and local-network access. Browser-only reverse
+proxy cookies cannot be handed off. An operator-issued Authorization value
+can be supplied explicitly for the selected HTTPS server, separately from the
+Plex token and any player token.
+
+The flow rejects values that exceed 255 bytes. A missing direct player key
+replaces the saved key with the app's disabled value, since the firmware retains
+blank secrets on Save. Proxy Authorization can be removed explicitly through
+the setup form. Address changes can clear unchanged credentials, so re-enter
+the proxy value if it is still needed.
+
+Run `node --test tests/now-playing.test.mjs` and
+`npm run test:browser -- tests/browser/now-playing.spec.mjs` for the offline
+companion checks. These test the bridge and mocked authentication. A real
+account and saved configuration still require qualification.
+
+[Official Plex Media Server authentication documentation](https://developer.plex.tv/pms/)
+
 ## License
 
 [MIT](LICENSE). Departure Mono and Jersey use SIL OFL 1.1:

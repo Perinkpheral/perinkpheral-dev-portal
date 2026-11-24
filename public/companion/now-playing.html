@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 GrakovNe -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https: http:; form-action 'none'; base-uri 'none'">
+  <title>Now Playing setup · perINKpheral</title>
+  <link rel="stylesheet" href="./now-playing.css">
+  <script type="module" src="./now-playing.mjs"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <a href="../" target="_blank" rel="noopener noreferrer">perINKpheral</a>
+      <label class="language" for="language">Language<select id="language"><option value="en">English</option><option value="ru">Русский</option></select></label>
+      <h1>Now Playing setup</h1>
+      <p>Works with Plex*</p>
+    </header>
+    <section aria-labelledby="device-heading">
+      <h2 id="device-heading">Connect to your device</h2>
+      <label for="device">Device page address</label>
+      <input id="device" type="url" autocomplete="off" spellcheck="false" placeholder="http://192.168.1.42">
+      <p>Copy the address from your perINKpheral tab. This page shares settings only with that tab at the confirmed address.</p>
+      <button id="bind" type="button">Confirm device</button>
+      <p id="peer" role="status" aria-live="polite">Open this setup from the app’s settings on your device.</p>
+    </section>
+    <fieldset id="setup" disabled>
+      <legend>Plex server</legend>
+      <div class="choices">
+        <button type="button" id="manual">Enter server manually</button>
+        <button type="button" id="signin">Sign in with Plex</button>
+      </div>
+      <div id="cloud" hidden>
+        <p>Sign in with your own Plex account. Choose one of your servers and use its LAN address or your own HTTPS address.</p>
+        <p><a id="approve" target="_blank" rel="noopener noreferrer" hidden>Open Plex sign-in ↗</a></p>
+        <button id="cancel" type="button" hidden>Cancel sign-in</button>
+        <label id="server-choice-label" for="server-choice" hidden>Personal server</label>
+        <select id="server-choice" hidden></select>
+        <div id="custom-cloud" hidden>
+          <label for="cloud-server">Server address <span>optional</span></label>
+          <input id="cloud-server" type="url" autocomplete="off" placeholder="Use the server’s LAN address">
+          <p>If you already use a custom HTTPS address, leave it here. Clear it to use the chosen server’s LAN address.</p>
+          <label id="cloud-confirm-label" for="cloud-confirm" hidden><input id="cloud-confirm" type="checkbox"><span id="cloud-confirm-text"></span></label>
+        </div>
+      </div>
+      <div id="manual-settings" hidden>
+        <label for="server">Server address</label>
+        <input id="server" type="url" autocomplete="off" placeholder="https://plex.example.org">
+        <label for="server-id">Server machine identifier <span>optional</span></label>
+        <input id="server-id" autocomplete="off" spellcheck="false" maxlength="255">
+        <label for="token">Server access key</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false">
+        <p>The app connects directly to this server. Use a Plex access key accepted at that address. A proxy that requires its own browser sign-in or cookie needs a different endpoint.</p>
+      </div>
+      <div id="target-settings" hidden>
+        <details id="proxy-settings" hidden>
+          <summary>Reverse proxy access</summary>
+          <label for="server-auth">Server Authorization header <span>optional</span></label>
+          <input id="server-auth" type="password" autocomplete="off" spellcheck="false">
+          <label for="clear-auth"><input id="clear-auth" type="checkbox">Remove saved proxy Authorization</label>
+          <p>Use a scoped credential issued by your proxy operator for this HTTPS server. Browser sign-in cookies cannot be transferred. If you change either address, re-enter the proxy credential if you still need it.</p>
+        </details>
+        <label for="receiver">Player <span>optional</span></label>
+        <select id="receiver"><option value="">Select automatically</option></select>
+        <button id="probe" type="button">Find players</button>
+        <details>
+          <summary>Enter player details</summary>
+          <label for="player-id">Player machine identifier</label>
+          <input id="player-id" autocomplete="off" maxlength="255">
+          <label for="player">Direct player address <span>optional</span></label>
+          <input id="player" type="url" autocomplete="off">
+          <label for="player-token">Direct player access key <span>optional</span></label>
+          <input id="player-token" type="password" autocomplete="off">
+        </details>
+        <label for="refresh">Refresh</label>
+        <select id="refresh"><option value="15 s">15 s</option><option value="30 s">30 s</option><option value="1 min">1 min</option></select>
+        <button id="fill" type="button">Fill device settings</button>
+        <p>Review the filled fields in the device tab, then select <strong>Save</strong>.</p>
+      </div>
+      <p id="activity" role="status" aria-live="polite"></p>
+    </fieldset>
+    <details class="privacy">
+      <summary>Privacy and compatibility</summary>
+      <p>Hosted setup sends sign-in requests to Plex. The sign-in key and account token are held only in this tab’s memory. No access key is sent to the perINKpheral web server. Manual setup works independently of Plex sign-in.</p>
+      <p>The browser verifies the chosen server during Plex setup and contacts it if you ask to find players. The server receives its access key and any proxy Authorization header you provide. When you fill the settings, your approved device tab receives the selected server and optional player credentials. Save on that device to store them. The app keeps the last confirmed playback metadata on the device for display when the server cannot be reached. Remove the app and choose to forget its data to clear both credentials and metadata. Revoke access separately in Plex if needed.</p>
+      <p>The device uses the configured server and, if supplied, the direct player address. It does not need a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
+      <p>* Used under license from Plex.</p>
+    </details>
+  </main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 GrakovNe */
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: 1.25rem;
+}
+header, section, fieldset, .privacy {
+  margin-block-end: 1.25rem;
+}
+header, section, fieldset {
+  border-block-end: 1px solid GrayText;
+  padding-block-end: 1rem;
+}
+h1, h2, p {
+  margin: 0 0 .65rem;
+}
+h1 {
+  font-size: 1.8rem;
+}
+h2, legend {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+fieldset {
+  min-inline-size: 0;
+  padding-inline: 0;
+  border-inline: 0;
+  border-block-start: 0;
+}
+label, input, select {
+  display: block;
+}
+label {
+  margin-block-start: .85rem;
+}
+label span {
+  color: GrayText;
+  font-size: .85em;
+}
+label input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin: 0 .4rem 0 0;
+}
+input, select, button {
+  box-sizing: border-box;
+  font: inherit;
+  padding: .45rem .6rem;
+}
+input, select {
+  width: 100%;
+  margin-bottom: .65rem;
+}
+button {
+  margin: .25rem .5rem .5rem 0;
+}
+#peer, #activity {
+  overflow-wrap: anywhere;
+}
+details {
+  margin-block: 1rem;
+}
+[hidden] {
+  display: none !important;
+}
+.language {
+  float: inline-end;
+  margin-block: 0;
+  font-size: .85rem;
+}
+.language select {
+  display: inline;
+  width: auto;
+  margin-inline-start: .4rem;
+}
