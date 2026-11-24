@@ -84,7 +84,29 @@ composites are ignored by git and included in the deployed site.
 `assets/renders/` holds three blank case views at 1600 x 1067, encoded as lossless WebP.
 They are reduced from the original 6000 x 4000 PNGs under the firmware repository's
 local `hardware/render/`. CI needs only these committed sources. Other case angles
-and the SDK's `kit-*` illustrations remain static assets in `public/`.
+and the SDK's `kit-*` illustrations are static assets in `public/`.
+
+To refresh the static case angles after an enclosure change, encode the production
+PNGs at the two gallery widths with the same WebP settings:
+
+```sh
+for angle in back back34r buttons left right top; do
+    for width in 800 1600; do
+        cwebp -quiet -q 80 -resize "$width" 0 \
+            "${PERINKPHERAL:-../perinkpheral-os}/hardware/render/perinkpheral_$angle.png" \
+            -o "public/renders/$angle-$width.webp"
+    done
+done
+```
+
+After running `npm run images`, refresh the link preview from the Weather
+composite, keeping the centered 1200 x 630 crop and JPEG quality:
+
+```sh
+ffmpeg -loglevel error -y -i public/renders/hero-weather-1600.webp \
+    -vf 'crop=1600:840,scale=1200:630:flags=lanczos,format=yuvj420p' \
+    -q:v 3 -frames:v 1 -update 1 public/og.jpg
+```
 
 ## License
 

@@ -276,7 +276,14 @@ tools/perinkpheral log --follow
               [t('Apps on a device', 'Приложений на устройстве'), t('Up to 24, while there is space', 'До 24, пока хватает места')],
             ]}
           />
-          <p>{t('The interpreter has a separate 80 KiB arena within the 144 KiB application area reserved at startup. The build warns when estimated interpreter use exceeds 80 KiB. Check the build’s memory report and verify interpreter headroom on a device.', 'Интерпретатору выделена отдельная арена 80 КиБ внутри области приложения размером 144 КиБ, резервируемой при запуске. Сборка предупреждает, если оценка памяти интерпретатора превышает 80 КиБ. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.')}</p>
+          <p>{t(
+            'Since firmware 0.1.95, the interpreter has a separate 80 KiB arena within the 144 KiB application area reserved at startup. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
+            'Начиная с прошивки 0.1.95 интерпретатору выделена отдельная арена 80 КиБ внутри области приложения размером 144 КиБ, резервируемой при запуске. Если оценка превышает 64 КиБ, а минимальная версия прошивки ниже 0.1.95, сборка предупреждает о совместимости. Если приложению нужна увеличенная арена, укажите версию прошивки 0.1.95 в его манифесте.',
+          )}</p>
+          <p>{t(
+            'The build separately warns when the estimate exceeds the current 80 KiB arena, regardless of the minimum firmware version. Check the build’s memory report and verify interpreter headroom on a device.',
+            'Если оценка превышает текущий размер арены в 80 КиБ, сборка выдаёт отдельное предупреждение независимо от минимальной версии прошивки. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.',
+          )}</p>
         </Chapter>
 
         <Chapter chapter={tools}>
