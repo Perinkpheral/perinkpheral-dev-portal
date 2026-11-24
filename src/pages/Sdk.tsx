@@ -115,9 +115,8 @@ void app_on_picked(int32_t poll, int32_t http_status)
 
 const POLL_FORMATS = `
 {
-  "format": "auto",
   "polls": [
-    { "url": "https://media.example.test/auto", "every": 60 },
+    { "url": "https://media.example.test/by-type", "every": 60 },
     { "url": "https://media.example.test/search", "every": 60,
       "method": "POST", "format": "xml",
       "headers": { "Content-Type": "application/xml" },
@@ -258,8 +257,8 @@ tools/perinkpheral log --follow
           />
           <Code label="weather.c">{VALUES}</Code>
           <h3>{t('Response formats', 'Форматы ответов')}</h3>
-          <p>{t('From firmware 0.1.100, set format to json, xml, raw or auto in an ABI 3 manifest. A poll can override the application default. Requests from code use the application default.', 'Начиная с прошивки 0.1.100 в манифесте ABI 3 можно указать format со значением json, xml, raw или auto. Формат опроса имеет приоритет над форматом приложения. Запросы из кода используют формат приложения.')}</p>
-          <p>{t('Explicit json or xml overrides the response Content-Type. The default auto uses its MIME type, including +json and +xml subtypes. Unknown or missing MIME types reach app_on_data() unchanged, as do responses explicitly marked raw.', 'Явные json и xml переопределяют Content-Type ответа. По умолчанию auto использует MIME-тип, включая подтипы +json и +xml. При неизвестном или отсутствующем MIME-типе байты передаются в app_on_data() без изменений, как и при явном raw.')}</p>
+          <p>{t('From firmware 0.1.100, set format to json, xml or raw in an ABI 3 manifest. A poll can override the application default. Requests from code use the application default.', 'Начиная с прошивки 0.1.100 в манифесте ABI 3 можно указать format со значением json, xml или raw. Формат опроса имеет приоритет над форматом приложения. Запросы из кода используют формат приложения.')}</p>
+          <p>{t('Explicit json or xml overrides the response Content-Type. With no format declaration, the response MIME type selects JSON or XML, including +json and +xml subtypes. Unknown or missing MIME types reach app_on_data() unchanged, as do responses explicitly marked raw.', 'Явные json и xml переопределяют Content-Type ответа. Без поля format JSON или XML выбирается по MIME-типу ответа, включая подтипы +json и +xml. При неизвестном или отсутствующем MIME-типе байты передаются в app_on_data() без изменений, как и при явном raw.')}</p>
           <p>{t('Register a 1–12,288 byte buffer with document_buffer_set() in app_on_load() to receive a complete JSON or XML body in app_on_document(). If the app also implements app_on_data(), its chunks arrive first. JSON polls with pick use app_on_picked() exclusively. Set format to json to keep picking from a server that mislabels its JSON.', 'Зарегистрируйте буфер от 1 до 12 288 байт через document_buffer_set() в app_on_load(), чтобы получать целый ответ JSON или XML в app_on_document(). Если в приложении есть app_on_data(), фрагменты сначала поступают в него. Опросы JSON с pick вызывают только app_on_picked(). Чтобы извлекать значения, когда сервер неверно маркирует JSON, задайте format со значением json.')}</p>
           <Code label="manifest.json">{POLL_FORMATS}</Code>
           <p>{t('The example combines Plex-style XML and Jellyfin-style JSON. It shows an automatically detected GET, a read-only XML query sent by POST with a response override, and an unknown MIME type delivered as bytes.', 'Пример сочетает XML в стиле Plex и JSON в стиле Jellyfin. В нём есть GET с автоматическим определением, запрос на чтение XML через POST с переопределением формата ответа и потоковая доставка неизвестного MIME-типа.')}{' '}<a href={files.pollFormats}>{t('Runnable example and tests', 'Рабочий пример и тесты')}</a></p>
