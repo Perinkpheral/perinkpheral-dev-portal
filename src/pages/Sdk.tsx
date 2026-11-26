@@ -143,7 +143,7 @@ export function Sdk() {
               [t('Language', 'Язык'), t('C, compiled to WebAssembly', 'C, компилируется в WebAssembly')],
               ['ABI', '3 · firmware 0.1.30+'],
               ['API', <a href={files.hostApi}>sdk/host_api.h</a>],
-              [t('Memory', 'Память'), t('64 KiB of linear memory per app', '64 КиБ линейной памяти на приложение')],
+              [t('Memory', 'Память'), t('Up to 64 KiB of linear memory per app', 'До 64 КиБ линейной памяти на приложение')],
               [t('Numbers', 'Числа'), t('No floating point; decimals as fixed-point numbers', 'Без плавающей точки; дробные - числами с фиксированной точкой')],
               [t('Package', 'Пакет'), t('app.wasm, manifest.json, translations, pictures, files', 'app.wasm, manifest.json, переводы, картинки, файлы')],
             ]}
@@ -287,7 +287,7 @@ tools/perinkpheral log --follow
             head={[t('What', 'Что'), t('Limit', 'Предел')]}
             rows={[
               [t('Module file', 'Файл модуля'), t('48 KiB', '48 КиБ')],
-              [t('Linear memory', 'Линейная память'), t('64 KiB, including stack, static data and application allocations', '64 КиБ, включая стек, статические данные и память приложения')],
+              [t('Linear memory', 'Линейная память'), t('Up to 64 KiB: the stack and static data, sized by the build', 'До 64 КиБ: стек и статические данные, размер определяет сборка')],
               [t('Time per call', 'Время на вызов'), '3 s'],
               [t('Saved data', 'Сохранённые данные'), t('2 KiB including settings and storage overhead; at most 1 KiB per value. Each key costs 64 bytes plus its value rounded up to 32 bytes.', '2 КиБ вместе с настройками и накладными расходами; до 1 КиБ на значение. Каждый ключ занимает 64 байта плюс размер значения, округлённый вверх до 32 байт.')],
               [t('Files', 'Файлы'), t('64 KiB for package files, charged in whole 4 KiB blocks per file. Applications that write files share 32 KiB between package and runtime files.', '64 КиБ для файлов пакета; каждый файл учитывается целыми блоками по 4 КиБ. Приложения с записью файлов делят 32 КиБ между файлами пакета и создаваемыми файлами.')],
@@ -300,12 +300,12 @@ tools/perinkpheral log --follow
             ]}
           />
           <p>{t(
-            'Since firmware 0.1.95, the interpreter has a separate 80 KiB arena within the 144 KiB application area reserved at startup. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
-            'Начиная с прошивки 0.1.95 интерпретатору выделена отдельная арена 80 КиБ внутри области приложения размером 144 КиБ, резервируемой при запуске. Если оценка превышает 64 КиБ, а минимальная версия прошивки ниже 0.1.95, сборка предупреждает о совместимости. Если приложению нужна увеличенная арена, укажите версию прошивки 0.1.95 в его манифесте.',
+            'The application's memory and the interpreter's share one 112 KiB area reserved at startup: what an app does not use for data is room for its code. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
+            'Память приложения и память интерпретатора делят одну область размером 112 КиБ, резервируемую при запуске: то, что приложение не занимает данными, достаётся его коду. Если оценка превышает 64 КиБ, а минимальная версия прошивки ниже 0.1.95, сборка предупреждает о совместимости. Если приложению нужна увеличенная арена, укажите версию прошивки 0.1.95 в его манифесте.',
           )}</p>
           <p>{t(
-            'The build separately warns when the estimate exceeds the current 80 KiB arena, regardless of the minimum firmware version. Check the build’s memory report and verify interpreter headroom on a device.',
-            'Если оценка превышает текущий размер арены в 80 КиБ, сборка выдаёт отдельное предупреждение независимо от минимальной версии прошивки. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.',
+            'The build separately warns when the memory and the code estimate together exceed the 112 KiB area, regardless of the minimum firmware version. Check the build’s memory report and verify interpreter headroom on a device.',
+            'Если память и оценка кода вместе превышают область в 112 КиБ, сборка выдаёт отдельное предупреждение независимо от минимальной версии прошивки. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.',
           )}</p>
         </Chapter>
 
