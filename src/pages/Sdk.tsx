@@ -300,7 +300,7 @@ tools/perinkpheral log --follow
             ]}
           />
           <p>{t(
-            'The application's memory and the interpreter's share one 112 KiB area reserved at startup: what an app does not use for data is room for its code. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
+            'The application’s memory and the interpreter’s share one 112 KiB area reserved at startup: what an app does not use for data is room for its code. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
             'Память приложения и память интерпретатора делят одну область размером 112 КиБ, резервируемую при запуске: то, что приложение не занимает данными, достаётся его коду. Если оценка превышает 64 КиБ, а минимальная версия прошивки ниже 0.1.95, сборка предупреждает о совместимости. Если приложению нужна увеличенная арена, укажите версию прошивки 0.1.95 в его манифесте.',
           )}</p>
           <p>{t(
