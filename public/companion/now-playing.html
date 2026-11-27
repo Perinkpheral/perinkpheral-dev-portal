@@ -19,6 +19,7 @@
       <label class="language" for="language">Language<select id="language"><option value="en">English</option><option value="ru">Русский</option></select></label>
       <h1>Now Playing setup</h1>
       <p>Connect to Plex* or Jellyfin</p>
+      <p>This companion requires a compatible now-playing application, which is not included in the current official catalog.</p>
     </header>
     <section aria-labelledby="device-heading">
       <h2 id="device-heading">Connect to your device</h2>
@@ -26,7 +27,7 @@
       <input id="device" type="url" autocomplete="off" spellcheck="false" placeholder="http://192.168.1.42">
       <p>Copy the address from your perINKpheral tab. This page shares settings only with that tab at the confirmed address.</p>
       <button id="bind" type="button">Confirm device</button>
-      <p id="peer" role="status" aria-live="polite">Open this setup from the app’s settings on your device.</p>
+      <p id="peer" role="status" aria-live="polite">Open this setup from the settings of a compatible now-playing application.</p>
     </section>
     <fieldset id="setup" disabled>
       <legend>Media server</legend>
@@ -85,7 +86,7 @@
               <input id="player" type="url" autocomplete="off">
               <label for="player-token">Direct player access key <span>optional</span></label>
               <input id="player-token" type="password" autocomplete="off">
-              <p>Supply a key only if this player requires one. The device verifies the player before offering controls.</p>
+              <p>Supply a key only if this player requires one.</p>
             </details>
           </template>
           <label for="refresh">Refresh</label>
@@ -121,8 +122,8 @@
     <details class="privacy">
       <summary>Privacy and compatibility</summary>
       <p>Hosted setup sends sign-in requests to Plex. The sign-in key and account token are held only in this tab’s memory. No access key is sent to the perINKpheral web server. Manual setup works independently of Plex sign-in.</p>
-      <p>The browser verifies the chosen server during Plex setup and contacts it if you ask to find players. The server receives its access key and any proxy Authorization header you provide. When you fill the settings, your approved device tab receives the selected server and optional player credentials. Save on that device to store them. The app keeps the last confirmed playback metadata on the device for display when the server cannot be reached. Remove the app and choose to forget its data to clear both credentials and metadata. Revoke access separately in Plex if needed.</p>
-      <p>The device uses the configured server and, if supplied, the direct player addresses. It does not need a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
+      <p>The browser verifies the chosen server during Plex setup and contacts it if you ask to find players. The server receives its access key and any proxy Authorization header you provide. When you fill the settings, your approved device tab receives the selected server and optional player credentials. Save on that device to store them. Revoke access separately in Plex if needed.</p>
+      <p>This companion does not require a perINKpheral account. Plex handles sign-in under its own <a href="https://www.plex.tv/about/privacy-legal/" rel="noopener noreferrer" target="_blank">privacy policies</a>.</p>
       <p>Jellyfin setup talks directly to the Jellyfin server you enter. Quick Connect uses a temporary secret while you approve the code in an existing Jellyfin client. The browser transfers a user token to the confirmed device tab when you fill the settings. A proxy that requires a browser session or its own Authorization header needs a Jellyfin endpoint that accepts native API authentication.</p>
       <p>* Used under license from Plex.</p>
     </details>

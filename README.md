@@ -110,9 +110,11 @@ ffmpeg -loglevel error -y -i public/renders/hero-weather-1600.webp \
 
 ## Now Playing companion
 
-The device opens `public/companion/now-playing.html` at
-`https://perinkpheral.dev/companion/now-playing.html`. The page is static and uses
-the firmware's two-window settings bridge. The user confirms the device tab's
+This companion requires a compatible `now-playing` application, which is not
+included in the current official catalog. The static page is
+`public/companion/now-playing.html`, served at
+`https://perinkpheral.dev/companion/now-playing.html`. It uses the firmware's
+two-window settings bridge. The user confirms the device tab's
 exact origin, fills its form, and presses Save on the device. The companion
 never sends credentials in a wildcard message. It follows the portal or browser
 language, with an English/Russian switch on the same URL.
@@ -127,15 +129,14 @@ Access keys stay in headers or device form values, outside navigable URLs.
 An existing custom address stays selected through sign-in. The companion asks
 before using a scoped server key at a custom origin. If Plex did not list that
 origin, it first compares the public identity without credentials. An identity
-match alone conveys no ownership. Choose up to three players from discovery or enter them manually. The device
-verifies each selected player's local address before offering direct controls. Browser discovery
-depends on server CORS, HTTPS and local-network access. Browser-only reverse
+match alone conveys no ownership. Choose up to three players from discovery or
+enter them manually. Browser discovery depends on server CORS, HTTPS and local-network access. Browser-only reverse
 proxy cookies cannot be handed off. An operator-issued Authorization value
 can be supplied explicitly for the selected HTTPS server, separately from the
 Plex token and any player token.
 
-Saving replaces the previous player list. Each player key belongs to its own
-receiver. A LAN player can permit direct access without a key. Device settings
+Filling settings replaces the player fields in the device form. Each player key
+belongs to its own receiver. A LAN player can permit direct access without a key. Device settings
 are limited to 255 bytes per field, including the combined receiver identifiers
 and keys. Setup rejects a combined value that does not fit. Re-enter the proxy
 credential after changing any address if it is still needed. Refresh choices

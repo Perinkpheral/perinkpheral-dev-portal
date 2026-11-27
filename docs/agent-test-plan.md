@@ -32,9 +32,8 @@ before any task, and check each with the command after it:
 
 - Git: `git --version`.
 - Java 21 or later (Temurin is fine): `java -version`.
-- A C compiler. For fuzzing you need clang with libFuzzer: on Linux the distribution's
-  `clang` and `llvm`; on macOS Homebrew's `llvm` (Apple's clang has no libFuzzer), used as
-  `$(brew --prefix llvm)/bin/clang`. Check: `clang --version`.
+- A C compiler. Fuzzing additionally requires Clang with libFuzzer.
+  Check: `<compiler> --version`.
 - wasi-sdk 34 from https://github.com/WebAssembly/wasi-sdk/releases (the archive for this
   computer's system and processor). Unpack it and `export WASI_SDK_PATH=<its folder>`.
   Check: `$WASI_SDK_PATH/bin/clang --version`.

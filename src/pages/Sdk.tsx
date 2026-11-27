@@ -145,7 +145,7 @@ export function Sdk() {
               ['API', <a href={files.hostApi}>sdk/host_api.h</a>],
               [t('Memory', 'Память'), t('Up to 64 KiB of linear memory per app', 'До 64 КиБ линейной памяти на приложение')],
               [t('Numbers', 'Числа'), t('No floating point; decimals as fixed-point numbers', 'Без плавающей точки; дробные - числами с фиксированной точкой')],
-              [t('Package', 'Пакет'), t('app.wasm, manifest.json, translations, pictures, files', 'app.wasm, manifest.json, переводы, картинки, файлы')],
+              [t('Package', 'Пакет'), t('app.wasm, manifest.json, optional translation tables and packaged files. Pictures from pictures/ are compiled into app.wasm.', 'app.wasm, manifest.json, необязательные таблицы переводов и файлы пакета. Изображения из pictures/ компилируются в app.wasm.')],
             ]}
           />
         </Chapter>
@@ -176,7 +176,7 @@ tools/perinkpheral
             </li>
             <li>
               <h3>{t('Run on the device', 'Запуск на устройстве')}</h3>
-              <p>{t('Install a Debug firmware build for run, screenshots and button control. Replace the example hostname with the address on the second About page.', 'Для run, снимков экрана и управления кнопками нужна прошивка Debug. Замените пример адресом со второй страницы About.')}</p>
+              <p>{t('Debug firmware is required for run and button control. Screenshots also work with release firmware. Replace the example hostname with the address on the second About page.', 'Для run и управления кнопками нужна прошивка Debug. Снимки экрана доступны и с релизной прошивкой. Замените пример адресом со второй страницы About.')}</p>
               <Code label="shell">{`
 export PERINKPHERAL_HOST=perinkpheral-xxxx.local
 tools/perinkpheral run ../myapp --shot screen.png
@@ -259,7 +259,7 @@ tools/perinkpheral log --follow
           <h3>{t('Response formats', 'Форматы ответов')}</h3>
           <p>{t('From firmware 0.1.100, set format to json, xml or raw in an ABI 3 manifest. A poll can override the application default. Requests from code use the application default.', 'Начиная с прошивки 0.1.100 в манифесте ABI 3 можно указать format со значением json, xml или raw. Формат опроса имеет приоритет над форматом приложения. Запросы из кода используют формат приложения.')}</p>
           <p>{t('Explicit json or xml overrides the response Content-Type. With no format declaration, the response MIME type selects JSON or XML, including +json and +xml subtypes. Unknown or missing MIME types reach app_on_data() unchanged, as do responses explicitly marked raw.', 'Явные json и xml переопределяют Content-Type ответа. Без поля format JSON или XML выбирается по MIME-типу ответа, включая подтипы +json и +xml. При неизвестном или отсутствующем MIME-типе байты передаются в app_on_data() без изменений, как и при явном raw.')}</p>
-          <p>{t('Register a 1–12,288 byte buffer with document_buffer_set() in app_on_load() to receive a complete JSON or XML body in app_on_document(). For http_send() and polls without pick, export app_on_data() if the format is raw or omitted. An explicit json or xml format allows app_on_document() alone. When both handlers are present, chunks arrive first in app_on_data(). JSON polls with pick use app_on_picked() exclusively. Set format to json to keep picking from a server that mislabels its JSON.', 'Зарегистрируйте буфер от 1 до 12 288 байт через document_buffer_set() в app_on_load(), чтобы получать целый ответ JSON или XML в app_on_document(). Для http_send() и опросов без pick экспортируйте app_on_data(), если указан raw или формат не задан. При явном json или xml достаточно app_on_document(). Если есть оба обработчика, фрагменты сначала поступают в app_on_data(). Опросы JSON с pick вызывают только app_on_picked(). Чтобы извлекать значения, когда сервер неверно маркирует JSON, задайте format со значением json.')}</p>
+          <p>{t('Register a buffer of 1 to 12,288 bytes with document_buffer_set() in app_on_load() to receive a complete JSON or XML body in app_on_document(). For http_send() and polls without pick, export app_on_data() if the format is raw or omitted. An explicit json or xml format allows app_on_document() alone. When both handlers are present, chunks arrive first in app_on_data(). JSON polls with pick use app_on_picked() exclusively. Set format to json to keep picking from a server that mislabels its JSON.', 'Зарегистрируйте буфер от 1 до 12 288 байт через document_buffer_set() в app_on_load(), чтобы получать целый ответ JSON или XML в app_on_document(). Для http_send() и опросов без pick экспортируйте app_on_data(), если указан raw или формат не задан. При явном json или xml достаточно app_on_document(). Если есть оба обработчика, фрагменты сначала поступают в app_on_data(). Опросы JSON с pick вызывают только app_on_picked(). Чтобы извлекать значения, когда сервер неверно маркирует JSON, задайте format со значением json.')}</p>
           <Code label="manifest.json">{POLL_FORMATS}</Code>
           <p>{t('The example combines Plex-style XML and Jellyfin-style JSON. It shows an automatically detected GET, a read-only XML query sent by POST with a response override, and an unknown MIME type delivered as bytes.', 'Пример сочетает XML в стиле Plex и JSON в стиле Jellyfin. В нём есть GET с автоматическим определением, запрос на чтение XML через POST с переопределением формата ответа и потоковая доставка неизвестного MIME-типа.')}{' '}<a href={files.pollFormats}>{t('Runnable example and tests', 'Рабочий пример и тесты')}</a></p>
 
@@ -288,24 +288,24 @@ tools/perinkpheral log --follow
             rows={[
               [t('Module file', 'Файл модуля'), t('48 KiB', '48 КиБ')],
               [t('Linear memory', 'Линейная память'), t('Up to 64 KiB: the stack and static data, sized by the build', 'До 64 КиБ: стек и статические данные, размер определяет сборка')],
-              [t('Time per call', 'Время на вызов'), '3 s'],
+              [t('Handler execution budget', 'Бюджет выполнения обработчика'), t('3 s, checked cooperatively at yield points and after return; native calls and scheduling can extend elapsed time.', '3 с, проверяется кооперативно в точках передачи управления и после возврата; нативные вызовы и планирование могут увеличить фактическое время.')],
               [t('Saved data', 'Сохранённые данные'), t('2 KiB including settings and storage overhead; at most 1 KiB per value. Each key costs 64 bytes plus its value rounded up to 32 bytes.', '2 КиБ вместе с настройками и накладными расходами; до 1 КиБ на значение. Каждый ключ занимает 64 байта плюс размер значения, округлённый вверх до 32 байт.')],
               [t('Files', 'Файлы'), t('64 KiB for package files, charged in whole 4 KiB blocks per file. Applications that write files share 32 KiB between package and runtime files.', '64 КиБ для файлов пакета; каждый файл учитывается целыми блоками по 4 КиБ. Приложения с записью файлов делят 32 КиБ между файлами пакета и создаваемыми файлами.')],
               [t('Scheduled requests', 'Запросы по расписанию'), t('4, every 10 s to 1 day', '4, от 10 с до суток')],
               [t('Requests waiting', 'Запросов в очереди'), t('At most 16 waiting per app; all apps share a 16 KiB queue budget. One request runs at a time for the device.', 'До 16 ожидающих запросов на приложение; общая очередь всех приложений ограничена 16 КиБ. Устройство выполняет один запрос за раз.')],
-              [t('Response size', 'Размер ответа'), t('256 KB parsed, 4 MB piece by piece', '256 КБ с разбором, 4 МБ частями')],
+              [t('Response size', 'Размер ответа'), t('256 KiB with JSON pick; 4 MiB streamed; complete-document delivery is limited to the registered buffer, at most 12,288 bytes.', '256 КиБ с JSON pick; 4 МиБ при потоковой передаче; доставка целого документа ограничена зарегистрированным буфером, не более 12 288 байт.')],
               [t('Settings', 'Настройки'), t('8, values up to 255 bytes', '8, значения до 255 байт')],
               [t('Timers and alarms', 'Таймеры и будильники'), t('4 and 4', '4 и 4')],
               [t('Apps on a device', 'Приложений на устройстве'), t('Up to 24, while there is space', 'До 24, пока хватает места')],
             ]}
           />
           <p>{t(
-            'The application’s memory and the interpreter’s share one 112 KiB area reserved at startup: what an app does not use for data is room for its code. If the estimate exceeds 64 KiB and the minimum firmware version is older than 0.1.95, the build warns about compatibility. If your app needs the larger arena, declare firmware 0.1.95 in its manifest.',
-            'Память приложения и память интерпретатора делят одну область размером 112 КиБ, резервируемую при запуске: то, что приложение не занимает данными, достаётся его коду. Если оценка превышает 64 КиБ, а минимальная версия прошивки ниже 0.1.95, сборка предупреждает о совместимости. Если приложению нужна увеличенная арена, укажите версию прошивки 0.1.95 в его манифесте.',
+            'The application’s linear memory and the interpreter share one 112 KiB area reserved at startup. Interpreter capacity depends on the application’s linear-memory size: 64 KiB of linear memory leaves 48 KiB for the interpreter. Check their combined use against the shared area.',
+            'Линейная память приложения и интерпретатор делят одну область размером 112 КиБ, резервируемую при запуске. Доступная интерпретатору память зависит от размера линейной памяти приложения: модуль с 64 КиБ линейной памяти оставляет интерпретатору 48 КиБ. Проверяйте их суммарное использование общей области.',
           )}</p>
           <p>{t(
-            'The build separately warns when the memory and the code estimate together exceed the 112 KiB area, regardless of the minimum firmware version. Check the build’s memory report and verify interpreter headroom on a device.',
-            'Если память и оценка кода вместе превышают область в 112 КиБ, сборка выдаёт отдельное предупреждение независимо от минимальной версии прошивки. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.',
+            'The build warns when linear memory and estimated interpreter use together exceed the 112 KiB area, regardless of the minimum firmware version. The estimate is advisory and does not measure peak use. Check the build’s memory report and verify interpreter headroom on a device.',
+            'Если линейная память и оценка использования памяти интерпретатором вместе превышают область в 112 КиБ, сборка выдаёт предупреждение независимо от минимальной версии прошивки. Оценка носит справочный характер и не измеряет пиковое использование. Проверяйте отчёт сборки о памяти и запас памяти интерпретатора на устройстве.',
           )}</p>
         </Chapter>
 

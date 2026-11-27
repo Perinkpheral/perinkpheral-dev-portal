@@ -116,7 +116,7 @@ export function LayersDiagram() {
 export function DeliveryDiagram() {
   const t = useT()
   return (
-    <Diagram width={820} height={600} label={t('Picked values or raw response chunks reach one app instance', 'Выбранные значения или части ответа поступают одному экземпляру приложения')}>
+    <Diagram width={820} height={700} label={t('Responses reach an application as picked values, raw chunks or document results. Unwanted streamed data is not read further.', 'Ответы поступают приложению как выбранные значения, части ответа или результаты доставки документа. Ненужные потоковые данные дальше не читаются.')}>
       <Box x={10} y={20} w={180} h={56} title={t('Schedule', 'Расписание')} />
       <Box x={10} y={100} w={180} h={56} title={t('On demand', 'По запросу')} />
       <Arrow points={[[190, 48], [235, 48], [235, 80], [260, 80]]} />
@@ -130,20 +130,23 @@ export function DeliveryDiagram() {
       <Box x={360} y={147} w={250} h={56} title={t('Selected values', 'Выбранные значения')} sub="app_on_picked" />
       <Arrow points={[[775, 116], [775, 255], [610, 255]]} label={t('raw body', 'тело ответа')} labelAt={[700, 245]} />
       <Box x={360} y={227} w={250} h={56} title={t('Response chunks', 'Части ответа')} sub="app_on_data" />
+      <Arrow points={[[800, 116], [800, 335], [610, 335]]} label={t('document', 'документ')} labelAt={[700, 325]} />
+      <Box x={360} y={307} w={250} h={56} title={t('Document result', 'Результат документа')} sub="app_on_document" />
       <Arrow points={[[360, 175], [300, 175], [300, 210], [250, 210]]} />
       <Arrow points={[[360, 255], [300, 255], [300, 226], [250, 226]]} />
+      <Arrow points={[[360, 335], [280, 335], [280, 238], [250, 238]]} />
       <Box x={20} y={190} w={230} h={56} title={t('App on screen?', 'Приложение на экране?')} filled />
-      <Arrow points={[[80, 246], [80, 320]]} label={t('yes', 'да')} labelAt={[60, 285]} />
-      <Box x={10} y={320} w={210} h={56} title={t('Deliver to app', 'Передать приложению')} />
-      <Arrow points={[[190, 246], [190, 300], [480, 300], [480, 320]]} label={t('no', 'нет')} labelAt={[260, 290]} />
-      <Box x={290} y={320} w={410} h={60} title={t('Temporarily load recipient', 'Временно загрузить получателя')}
+      <Arrow points={[[80, 246], [80, 420]]} label={t('yes', 'да')} labelAt={[60, 385]} />
+      <Box x={10} y={420} w={210} h={56} title={t('Deliver to app', 'Передать приложению')} />
+      <Arrow points={[[190, 246], [190, 400], [480, 400], [480, 420]]} label={t('no', 'нет')} labelAt={[260, 390]} />
+      <Box x={290} y={420} w={410} h={60} title={t('Temporarily load recipient', 'Временно загрузить получателя')}
         sub={t('Unload the foreground app; deliver the response', 'Выгрузить активное приложение; передать ответ')} />
-      <Arrow points={[[495, 380], [495, 410]]} />
-      <Box x={290} y={410} w={410} h={56} title={t('Focus requested and allowed?', 'Фокус запрошен и разрешён?')} filled />
-      <Arrow points={[[390, 466], [390, 495], [180, 495], [180, 520]]} label={t('no', 'нет')} labelAt={[280, 485]} />
-      <Arrow points={[[600, 466], [600, 520]]} label={t('yes', 'да')} labelAt={[625, 495]} />
-      <Box x={10} y={520} w={340} h={56} title={t('Restore previous screen', 'Восстановить прежний экран')} />
-      <Box x={430} y={520} w={340} h={56} title={t('Show recipient', 'Показать получателя')} />
+      <Arrow points={[[495, 480], [495, 510]]} />
+      <Box x={290} y={510} w={410} h={56} title={t('Focus requested and allowed?', 'Фокус запрошен и разрешён?')} filled />
+      <Arrow points={[[390, 566], [390, 595], [180, 595], [180, 620]]} label={t('no', 'нет')} labelAt={[280, 585]} />
+      <Arrow points={[[600, 566], [600, 620]]} label={t('yes', 'да')} labelAt={[625, 595]} />
+      <Box x={10} y={620} w={340} h={56} title={t('Restore previous screen', 'Восстановить прежний экран')} />
+      <Box x={430} y={620} w={340} h={56} title={t('Show recipient', 'Показать получателя')} />
     </Diagram>
   )
 }
