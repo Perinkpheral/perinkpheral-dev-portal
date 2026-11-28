@@ -125,7 +125,7 @@ for (const lang of ['en', 'ru']) for (const kind of ['fresh', 'older fresh', 'Ke
       await expect(body).not.toContainText(lang === 'ru' ? 'запустится само' : 'starts automatically')
     }
     if (mode === 'preserve') {
-      await expect(body).toContainText(lang === 'ru' ? 'Сохранённые Wi-Fi и приложения' : 'Your saved Wi-Fi and apps')
+      await expect(body).toContainText(lang === 'ru' ? 'Wi-Fi и приложения сохранены' : 'Wi-Fi and apps are kept')
     } else {
       await expect(body).toContainText(lang === 'ru' ? 'отсканируйте QR-код' : 'scan the QR code')
     }
