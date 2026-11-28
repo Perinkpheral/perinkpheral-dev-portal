@@ -56,6 +56,10 @@ export function Firmware() {
             ]}
           />
           <p>{t(
+            'Outgoing requests share one connection. Picked bodies have a 60 s read deadline; streamed bodies have 300 s. A stream that an application continues to consume can hold that connection while other polls, catalog reads and installations wait. Streams with no remaining consumer are closed early.',
+            'Исходящие запросы используют одно соединение. На чтение тела с pick отводится 60 с, на потоковое тело — 300 с. Пока приложение продолжает принимать поток, он может занимать соединение, а другие опросы, чтение каталогов и установки ожидают в очереди. Потоки без оставшегося получателя закрываются досрочно.',
+          )}</p>
+          <p>{t(
             'The page downloads the firmware, then restarts the device into recovery. The screen shows preparation, then asks you to press OK to install. Settings and apps are kept.',
             'Страница скачивает прошивку и перезапускает устройство в recovery. Экран показывает подготовку, затем просит нажать OK для установки. Настройки и приложения сохраняются.',
           )}</p>
@@ -69,7 +73,7 @@ export function Firmware() {
           )} <Link to={local('/flash')}>{t('Open flasher', 'Открыть прошивальщик')}</Link></p>
           <p>{t(
             'To enter recovery manually, choose Device → Enter recovery on the web page, or hold BACK while restarting and keep it held for three seconds.',
-            'Чтобы войти в recovery вручную, выберите Device → Enter recovery на веб-странице или держите BACK при перезапуске и ещё три секунды после него.',
+            'Чтобы войти в recovery вручную, выберите Устройство → Войти в recovery на веб-странице или держите BACK при перезапуске и ещё три секунды после него.',
           )}</p>
           <p>{t(
             'If the main firmware does not answer, hold UP and BACK for ten seconds to restart, then keep BACK held for another three seconds. This restart combination is available in the main firmware, not in recovery.',
@@ -98,6 +102,10 @@ export function Firmware() {
         </Chapter>
 
         <Chapter chapter={api}>
+          <p>{t(
+            'The stress run dated 2026-11-27 observed temporary page unavailability under 20 or more heavy clients; service recovered when the load stopped. Background handlers increased the time to open an application to as much as 4.3 s, compared with 1.6 s. These measurements used 0.1.101 and development builds. They do not qualify 0.2.0 or define a supported client capacity.',
+            'В нагрузочном испытании от 2026-11-27 при 20 и более клиентах с высокой нагрузкой страница временно не отвечала; доступ восстанавливался после прекращения нагрузки. Фоновые обработчики увеличивали время открытия приложения до 4,3 с по сравнению с 1,6 с. Измерения выполнены на 0.1.101 и сборках для разработки. Они не подтверждают готовность 0.2.0 и не определяют поддерживаемое число клиентов.',
+          )}{' '}<a href={files.stressReport}>{t('Stress report, 2026-11-27', 'Отчёт об испытании от 2026-11-27')}</a></p>
           <p>
             <a href={files.openapi}>OpenAPI specification</a>
           </p>

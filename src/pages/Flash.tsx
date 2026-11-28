@@ -533,8 +533,8 @@ export function Flash() {
             {mode === 'fresh'
               ? t('Everything on the board is erased.', 'Всё на плате будет стёрто.')
               : installPath
-                ? t('Keeps settings, Wi-Fi, apps and their data. The existing layout is checked before writing.',
-                    'Сохраняет настройки, Wi-Fi, приложения и их данные. Разметка проверяется перед записью.')
+                ? t('Keeps settings, Wi-Fi, apps and their data. Checks the layout before writing. Pre-release apps may need an update or rebuild for 0.2.0.',
+                    'Сохраняет настройки, Wi-Fi, приложения и их данные. Проверяет разметку перед записью. Приложения из предварительных версий могут требовать обновления или пересборки для 0.2.0.')
                 : t('This release has no migration build. Choose a newer release to keep data.',
                     'У этой версии нет сборки для переноса. Выберите более новую версию, чтобы сохранить данные.')}
           </p>
@@ -593,7 +593,7 @@ export function Flash() {
         </p>
         <p>
           {phase.mode === 'preserve'
-            ? t('Your saved Wi-Fi and apps are kept.', 'Сохранённые Wi-Fi и приложения остаются на месте.')
+            ? t('Wi-Fi and apps are kept. Pre-release apps may need an update or rebuild for 0.2.0.', 'Wi-Fi и приложения сохранены. Приложения из предварительных версий могут требовать обновления или пересборки для 0.2.0.')
             : t('Then scan the QR code to set up Wi-Fi.', 'Затем отсканируйте QR-код, чтобы настроить Wi-Fi.')}
         </p>
       </>

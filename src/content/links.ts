@@ -27,6 +27,7 @@ export const caseFiles = {
 
 export const files = {
   hostApi: blob('sdk/host_api.h'),
+  xmlApi: blob('sdk/host/xml.h'),
   sdkLib: `${repo.firmware}/tree/main/sdk/lib`,
   hello: `${repo.firmware}/tree/main/sdk/apps/hello`,
   pollFormats: `${repo.firmware}/tree/main/docs/examples/poll-formats`,
@@ -38,6 +39,7 @@ export const files = {
   partitions: blob('firmware/partitions.csv'),
   security: blob('SECURITY.md'),
   openapi: blob('docs/api/openapi.yaml'),
+  stressReport: blob('docs/testing/stress-2026-11-27.md'),
   license: blob('LICENSE'),
   releases: `${repo.firmware}/releases`,
   catalog: `${repo.apps}/tree/main/catalog`,
